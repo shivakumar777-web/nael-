@@ -1,0 +1,2711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#020C05">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nael OR">
+  <title>Nael — Surgical Intelligence</title>
+
+  <!-- PWA Manifest inline -->
+  <script>
+    const manifest = {
+      name: "Nael v2.0 — Surgical Intelligence by Quaasx108",
+      short_name: "Nael OR",
+      description: "Hands-free surgical voice assistant by Quaasx108 Pvt Ltd",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#020C05",
+      theme_color: "#020C05",
+      icons: [],
+      version: "2.0"
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── DESIGN TOKENS ─── */
+    :root {
+      --bg:        #020C05;
+      --bg2:       #061208;
+      --bg3:       #0B1E0F;
+      --bg4:       #112516;
+      --green:     #00E676;
+      --green-lo:  #00A152;
+      --green-dim: rgba(0,230,118,0.12);
+      --green-glow:rgba(0,230,118,0.25);
+      --amber:     #FFB300;
+      --red:       #FF3D00;
+      --blue:      #40C4FF;
+      --text:      #DDEEE0;
+      --text-2:    #8ABF94;
+      --text-3:    #4E7A55;
+      --border:    rgba(0,230,118,0.18);
+      --border2:   rgba(0,230,118,0.08);
+      --r:         10px;
+      --font:      'Rajdhani', sans-serif;
+      --mono:      'Share Tech Mono', monospace;
+      --safe-top:  env(safe-area-inset-top, 0px);
+      --safe-bot:  env(safe-area-inset-bottom, 0px);
+    }
+
+    *, *::before, *::after {
+      margin:0; padding:0; box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+      -webkit-touch-callout:none;
+    }
+
+    html { height: 100%; overflow: hidden; }
+
+    body {
+      height: 100vh;
+      height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content:'';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* Grid texture */
+    body::before {
+      content:'';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,230,118,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,230,118,0.025) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── LAYOUT ─── */
+    #app {
+      position: relative;
+      z-index: 1;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bot);
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      flex-shrink: 0;
+      padding: 14px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(2,12,5,0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-orb {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1.5px solid var(--green-lo);
+      background: var(--green-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .logo-orb::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green), 0 0 20px var(--green-glow);
+      animation: orb-pulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes orb-pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.7); opacity: 0.4; }
+    }
+
+    .logo-info { display: flex; flex-direction: column; gap: 1px; }
+
+    .logo-name {
+      font-family: var(--mono);
+      font-size: 15px;
+      color: var(--green);
+      letter-spacing: 0.12em;
+      line-height: 1;
+    }
+
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-3);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Status chip */
+    #status-chip {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-3);
+      background: var(--bg2);
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+
+    #status-chip.listening {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-dim);
+      box-shadow: 0 0 12px var(--green-dim);
+    }
+    #status-chip.thinking {
+      border-color: var(--blue);
+      color: var(--blue);
+      background: rgba(64,196,255,0.1);
+    }
+    #status-chip.speaking {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: rgba(255,179,0,0.1);
+    }
+    #status-chip.error {
+      border-color: var(--red);
+      color: var(--red);
+      background: rgba(255,61,0,0.1);
+    }
+
+    .icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text-2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .icon-btn:active {
+      border-color: var(--green);
+      color: var(--green);
+      transform: scale(0.93);
+    }
+
+    /* ─── META BAR ─── */
+    .meta-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 7px 18px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border2);
+      gap: 6px;
+    }
+
+    .meta-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .meta-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-sep {
+      width: 1px;
+      height: 14px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    #model-badge {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text-3);
+      letter-spacing: 0.1em;
+      text-align: right;
+    }
+
+    /* Audio device indicator */
+    #audio-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      color: var(--text-2);
+      margin-left: 8px;
+    }
+    #audio-badge.bluetooth { border-color: var(--blue); color: var(--blue); background: rgba(64,196,255,0.1); }
+    #audio-badge.wired { border-color: var(--amber); color: var(--amber); background: rgba(255,179,0,0.1); }
+    #audio-badge.builtin { border-color: var(--text-3); color: var(--text-3); }
+
+    /* ─── MODE TOGGLE BUTTON ─── */
+    .mode-btn {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    .mode-btn:hover { border-color: var(--green-lo); }
+    .mode-btn.handsfree {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-dim);
+      box-shadow: 0 0 12px var(--green-glow);
+    }
+
+    /* ─── HANDS-FREE ORB ─── */
+    .hf-listener-orb {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: var(--bg3);
+      border: 2px solid var(--green-lo);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .hf-listener-orb.standby {
+      border-color: var(--green-lo);
+      animation: hf-standby-pulse 3s ease-in-out infinite;
+    }
+    .hf-listener-orb.listening {
+      border-color: var(--green);
+      background: rgba(0,230,118,0.08);
+      box-shadow: 0 0 40px rgba(0,230,118,0.2);
+    }
+    .hf-listener-orb.thinking {
+      border-color: var(--blue);
+      background: rgba(64,196,255,0.06);
+    }
+    .hf-listener-orb.speaking {
+      border-color: var(--amber);
+      background: rgba(255,179,0,0.06);
+    }
+    .hf-listener-orb.paused {
+      border-color: var(--text-3);
+      background: var(--bg4);
+      opacity: 0.6;
+    }
+
+    @keyframes hf-standby-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0); transform: scale(1); }
+      50% { box-shadow: 0 0 20px rgba(0,230,118,0.15); transform: scale(1.02); }
+    }
+
+    .hf-rings {
+      position: absolute;
+      inset: -15px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(0,230,118,0.1);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .hf-listener-orb.listening .hf-rings {
+      opacity: 1;
+      animation: hf-ring-expand 1.5s ease-out infinite;
+    }
+    @keyframes hf-ring-expand {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.3); opacity: 0; }
+    }
+
+    .hf-ico {
+      font-size: 36px;
+      transition: transform 0.2s;
+    }
+    .hf-listener-orb.listening .hf-ico {
+      transform: scale(1.1);
+    }
+
+    .hf-wave {
+      position: absolute;
+      bottom: 25px;
+      display: flex;
+      gap: 3px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .hf-wave::before,
+    .hf-wave::after {
+      content: '';
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: hf-wave 0.5s ease-in-out infinite alternate;
+    }
+    .hf-wave::after { animation-delay: 0.15s; }
+    .hf-listener-orb.listening .hf-wave {
+      opacity: 1;
+    }
+    @keyframes hf-wave {
+      from { transform: scaleY(1); }
+      to { transform: scaleY(3); }
+    }
+
+    .hf-status {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-2);
+      letter-spacing: 0.1em;
+      margin-top: 12px;
+    }
+    .hf-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-3);
+      letter-spacing: 0.1em;
+      opacity: 0.6;
+      margin-top: 8px;
+    }
+
+    .hf-pause-btn {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-2);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .hf-pause-btn:hover { border-color: var(--green); color: var(--green); }
+    .hf-pause-btn.paused {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    /* ─── STATUS CHIP STANDBY ─── */
+    #status-chip.standby {
+      border-color: var(--green-lo);
+      color: var(--green-lo);
+      background: transparent;
+    }
+
+    /* ─── TRANSCRIPT ─── */
+    #transcript {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+
+    #transcript::-webkit-scrollbar { width: 2px; }
+    #transcript::-webkit-scrollbar-track { background: transparent; }
+    #transcript::-webkit-scrollbar-thumb { background: var(--green-lo); border-radius: 1px; }
+
+    /* Empty state */
+    #empty-msg {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      opacity: 0.35;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .empty-ring {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 1.5px solid var(--green-lo);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .empty-ring::before {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      border: 1px dashed var(--green-lo);
+      animation: spin 8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-ring svg { color: var(--text-2); }
+
+    .empty-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-2);
+      letter-spacing: 0.1em;
+      line-height: 1.8;
+    }
+
+    /* Messages */
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      animation: msg-appear 0.3s ease;
+    }
+
+    @keyframes msg-appear {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding-left: 4px;
+    }
+
+    .msg.user .msg-label { color: var(--text-3); }
+    .msg.ai .msg-label { color: var(--green-lo); }
+
+    .msg-bubble {
+      padding: 10px 14px;
+      border-radius: var(--r);
+      font-size: 16px;
+      line-height: 1.5;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--text-3);
+      color: var(--text-2);
+      font-style: italic;
+    }
+
+    .msg.ai .msg-bubble {
+      background: rgba(0,230,118,0.06);
+      border: 1px solid rgba(0,230,118,0.2);
+      border-left: 3px solid var(--green);
+      color: var(--text);
+    }
+
+    .msg.ai .msg-bubble.caution {
+      background: rgba(255,61,0,0.06);
+      border-color: rgba(255,61,0,0.25);
+      border-left-color: var(--red);
+    }
+
+    .caution-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--red);
+      font-weight: 700;
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── INTERIM / LIVE ─── */
+    #interim-bar {
+      flex-shrink: 0;
+      min-height: 38px;
+      padding: 8px 16px;
+      border-top: 1px solid var(--border2);
+      background: var(--bg2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    #interim-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+      display: none;
+      animation: blink 0.7s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%,100%{opacity:1} 50%{opacity:0.15}
+    }
+
+    #interim-text {
+      font-family: var(--font);
+      font-size: 14px;
+      color: var(--text-2);
+      font-style: italic;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #interim-bar:empty::after,
+    #interim-bar.idle::after {
+      content: '—';
+      color: var(--text-3);
+      font-family: var(--mono);
+      font-size: 12px;
+      opacity: 0.4;
+    }
+
+    /* ─── VISUALIZER ─── */
+    #viz-wrap {
+      flex-shrink: 0;
+      height: 44px;
+      background: var(--bg2);
+      border-top: 1px solid var(--border2);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    #viz {
+      width: 100%;
+      height: 32px;
+    }
+
+    /* ─── PTT AREA ─── */
+    .ptt-wrap {
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 16px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #ptt {
+      width: 116px;
+      height: 116px;
+      border-radius: 50%;
+      border: 2px solid var(--green-lo);
+      background: var(--bg3);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      position: relative;
+      touch-action: none;
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Outer ring */
+    #ptt::before {
+      content: '';
+      position: absolute;
+      inset: -10px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(0,230,118,0.12);
+      transition: all 0.3s;
+    }
+
+    /* Far ring */
+    #ptt::after {
+      content: '';
+      position: absolute;
+      inset: -22px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,230,118,0.05);
+      transition: all 0.3s;
+    }
+
+    /* LISTENING STATE */
+    #ptt.active {
+      border-color: var(--green);
+      background: rgba(0,230,118,0.08);
+      box-shadow:
+        0 0 0 0 rgba(0,230,118,0.4),
+        0 0 40px rgba(0,230,118,0.15);
+      transform: scale(0.96);
+      animation: ptt-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes ptt-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.35), 0 0 40px rgba(0,230,118,0.12); }
+      50% { box-shadow: 0 0 0 18px rgba(0,230,118,0), 0 0 40px rgba(0,230,118,0.25); }
+    }
+
+    #ptt.active::before {
+      inset: -16px;
+      border-color: rgba(0,230,118,0.3);
+      animation: ring-expand 1.2s ease-in-out infinite;
+    }
+
+    @keyframes ring-expand {
+      0%,100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.3; }
+    }
+
+    /* SPEAKING STATE */
+    #ptt.speaking {
+      border-color: var(--amber);
+      background: rgba(255,179,0,0.06);
+      box-shadow: 0 0 25px rgba(255,179,0,0.15);
+    }
+
+    #ptt.thinking {
+      border-color: var(--blue);
+      background: rgba(64,196,255,0.06);
+    }
+
+    .ptt-ico {
+      font-size: 34px;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+
+    .ptt-txt {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      text-align: center;
+      transition: color 0.15s;
+    }
+
+    #ptt.active .ptt-txt { color: var(--green); }
+    #ptt.speaking .ptt-txt { color: var(--amber); }
+    #ptt.thinking .ptt-txt { color: var(--blue); }
+
+    .ptt-hint {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-3);
+      letter-spacing: 0.1em;
+      opacity: 0.5;
+      text-align: center;
+    }
+
+    /* ─── SETTINGS OVERLAY ─── */
+    #settings {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(2,12,5,0.97);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 0 0 var(--safe-bot);
+    }
+
+    #settings.open { display: flex; }
+
+    .settings-hdr {
+      position: sticky;
+      top: 0;
+      padding: 16px 18px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(2,12,5,0.95);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+    }
+
+    .settings-title {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--green);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .settings-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .s-section-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-3);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border2);
+      margin-bottom: 12px;
+    }
+
+    .s-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+
+    .s-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-2);
+      letter-spacing: 0.08em;
+    }
+
+    .s-input,
+    .s-select,
+    .s-textarea {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .s-input:focus,
+    .s-select:focus,
+    .s-textarea:focus { border-color: var(--green); }
+
+    .s-textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+
+    .s-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234E7A55' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+    .s-select option { background: #061208; }
+
+    /* Model list */
+    .model-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .model-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      transition: border-color 0.2s;
+    }
+
+    .model-row.current { border-color: var(--green); background: var(--green-dim); }
+
+    .model-name { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+
+    .model-tag {
+      font-family: var(--mono);
+      font-size: 9px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .model-tag.p { background: rgba(0,230,118,0.15); color: var(--green); }
+    .model-tag.f1 { background: rgba(64,196,255,0.15); color: var(--blue); }
+    .model-tag.f2 { background: rgba(255,179,0,0.15); color: var(--amber); }
+    .model-tag.f3 { background: rgba(200,200,200,0.1); color: #aaa; }
+
+    /* Buttons */
+    .btn-save {
+      width: 100%;
+      padding: 15px;
+      background: var(--green);
+      color: #020C05;
+      border: none;
+      border-radius: var(--r);
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-save:active { background: #00FF8A; transform: scale(0.98); }
+
+    .btn-clear {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      background: transparent;
+      color: var(--red);
+      border: 1px solid rgba(255,61,0,0.3);
+      border-radius: var(--r);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-clear:active { background: rgba(255,61,0,0.08); }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 170px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      z-index: 999;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Thinking dots */
+    @keyframes think {
+      0%,80%,100%{opacity:0.2;transform:scale(0.8)}
+      40%{opacity:1;transform:scale(1)}
+    }
+
+    .think-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      margin: 0 2px;
+      animation: think 1.2s ease-in-out infinite;
+    }
+    .think-dot:nth-child(2){animation-delay:0.2s}
+    .think-dot:nth-child(3){animation-delay:0.4s}
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-orb"></div>
+      <div class="logo-info">
+        <div class="logo-name">NAEL</div>
+        <div class="logo-sub">Nael · Surgical Intelligence by Quaasx108</div>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button id="mode-toggle" class="mode-btn" onclick="toggleMode()" aria-label="Toggle mode">🎙️ HANDS-FREE</button>
+      <div id="status-chip">READY</div>
+      <button class="icon-btn" onclick="openSettings()" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- ── META BAR ── -->
+  <div class="meta-bar">
+    <span class="meta-tag">Specialty</span>
+    <span class="meta-val" id="specialty-label">General Surgery</span>
+    <div class="meta-sep"></div>
+    <span class="meta-tag">Lang</span>
+    <span class="meta-val" id="lang-label">EN</span>
+    <div class="meta-sep"></div>
+    <span id="audio-badge">🎧 Scanning...</span>
+    <div id="model-badge">—</div>
+  </div>
+
+  <!-- ── TRANSCRIPT ── -->
+  <div id="transcript">
+    <div id="empty-msg">
+      <div class="empty-ring">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+          <line x1="8" y1="22" x2="16" y2="22"/>
+        </svg>
+      </div>
+      <div class="empty-text">
+        Say NAEL to activate · or Hold to Speak<br>
+        "Nael" · Neckband button · Spacebar · Hold
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INTERIM BAR ── -->
+  <div id="interim-bar">
+    <span id="interim-dot"></span>
+    <span id="interim-text"></span>
+  </div>
+
+  <!-- ── VISUALIZER ── -->
+  <div id="viz-wrap">
+    <canvas id="viz"></canvas>
+  </div>
+
+  <!-- ── PTT / HANDS-FREE ── -->
+  <div class="ptt-wrap">
+    <!-- PTT Button (visible in PTT mode) -->
+    <div id="ptt"
+      ontouchstart="onPTTDown(event)" ontouchend="onPTTUp(event)" ontouchcancel="onPTTUp(event)"
+      onmousedown="onPTTDown(event)" onmouseup="onPTTUp(event)" onmouseleave="onPTTUp(event)"
+      role="button" aria-label="Push to Talk">
+      <span class="ptt-ico" id="ptt-ico">🎤</span>
+      <span class="ptt-txt" id="ptt-txt">Hold to Speak</span>
+    </div>
+
+    <!-- Hands-Free Orb (visible in Hands-Free mode) -->
+    <div id="hf-orb" style="display:none">
+      <div id="hf-listener" class="hf-listener-orb">
+        <div id="hf-rings" class="hf-rings"></div>
+        <span id="hf-ico" class="hf-ico">🎙️</span>
+        <div id="hf-wave" class="hf-wave"></div>
+      </div>
+      <div id="hf-status" class="hf-status">Standby — listening</div>
+      <button id="hf-pause" class="hf-pause-btn" onclick="togglePauseListening()">⏸ Pause Listening</button>
+    </div>
+
+    <div class="ptt-hint" id="ptt-hint">Say NAEL · Neckband · Space</div>
+    <div class="hf-hint" id="hf-hint" style="display:none">Listening for you, Doctor…</div>
+  </div>
+
+</div>
+
+<!-- ── SETTINGS PANEL ── -->
+<div id="settings">
+  <div class="settings-hdr">
+    <span class="settings-title">⚙ Nael Configuration</span>
+    <button class="icon-btn" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="settings-body">
+
+    <!-- Audio Devices -->
+    <div>
+      <div class="s-section-title">Audio Devices</div>
+      <div class="s-field">
+        <label class="s-label">Microphone Input</label>
+        <select class="s-select" id="inp-audio-in">
+          <option value="">Default Microphone</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Audio Output (TTS)</label>
+        <select class="s-select" id="inp-audio-out">
+          <option value="">Default Speaker</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Surgical Context -->
+    <div>
+      <div class="s-section-title">Surgical Context</div>
+      <div class="s-field">
+        <label class="s-label">Specialty</label>
+        <select class="s-select" id="inp-specialty">
+          <option>General Surgery</option>
+          <option>Orthopedic Surgery</option>
+          <option>Neurosurgery</option>
+          <option>Cardiac Surgery</option>
+          <option>Vascular Surgery</option>
+          <option>Laparoscopic Surgery</option>
+          <option>Plastic &amp; Reconstructive</option>
+          <option>Urology</option>
+          <option>Gynecological Surgery</option>
+          <option>ENT Surgery</option>
+          <option>Ophthalmic Surgery</option>
+          <option>Pediatric Surgery</option>
+          <option>Trauma Surgery</option>
+          <option>Spine Surgery</option>
+          <option>Hepatobiliary Surgery</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Recognition Language</label>
+        <select class="s-select" id="inp-lang">
+          <option value="en-IN">English — India (en-IN)</option>
+          <option value="en-US">English — US (en-US)</option>
+          <option value="en-GB">English — UK (en-GB)</option>
+          <option value="hi-IN">Hindi (hi-IN)</option>
+          <option value="kn-IN">Kannada (kn-IN)</option>
+          <option value="ta-IN">Tamil (ta-IN)</option>
+          <option value="te-IN">Telugu (te-IN)</option>
+          <option value="ml-IN">Malayalam (ml-IN)</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Session Context (patient weight, allergies, procedure, etc.)</label>
+        <textarea class="s-textarea" id="inp-ctx" placeholder="e.g. Patient: 68kg male. Laparoscopic cholecystectomy. Allergic to penicillin. BP 120/80 on entry."></textarea>
+      </div>
+    </div>
+
+    <!-- Voice -->
+    <div>
+      <div class="s-section-title">Voice Output</div>
+      <div class="s-field">
+        <label class="s-label">TTS Voice</label>
+        <select class="s-select" id="inp-voice">
+          <option value="">Auto (best available)</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Speech Rate</label>
+        <select class="s-select" id="inp-rate">
+          <option value="0.85">Slow</option>
+          <option value="1.0" selected>Normal</option>
+          <option value="1.15">Fast</option>
+          <option value="1.3">Very Fast</option>
+          <option value="1.5">Maximum</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Hands-Free Settings -->
+    <div>
+      <div class="s-section-title">Hands-Free Settings</div>
+      <div class="s-field">
+        <label class="s-label">Silence Timeout (auto-send after silence)</label>
+        <select class="s-select" id="inp-silence">
+          <option value="1.0">1.0 second (quick response)</option>
+          <option value="1.5" selected>1.5 seconds (default)</option>
+          <option value="2.0">2.0 seconds (pauses allowed)</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Voice Detection Sensitivity</label>
+        <select class="s-select" id="inp-sensitivity">
+          <option value="low">Low (less false triggers)</option>
+          <option value="medium" selected>Medium (balanced)</option>
+          <option value="high">High (catches quiet speech)</option>
+        </select>
+      </div>
+      <div class="s-field">
+        <label class="s-label">Auto-Calibrate on Launch</label>
+        <select class="s-select" id="inp-calibrate">
+          <option value="on" selected>Enabled (recommended)</option>
+          <option value="off">Disabled</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Models -->
+    <div>
+      <div class="s-section-title">Model Fallback Chain</div>
+      <div class="model-list">
+        <div class="model-row" id="mrow-0">
+          <span class="model-name">google/gemini-flash-2.0</span>
+          <span class="model-tag p">Primary</span>
+        </div>
+        <div class="model-row" id="mrow-1">
+          <span class="model-name">meta-llama/llama-3.3-70b-instruct</span>
+          <span class="model-tag f1">Fallback 1</span>
+        </div>
+        <div class="model-row" id="mrow-2">
+          <span class="model-name">anthropic/claude-haiku-3-5</span>
+          <span class="model-tag f2">Fallback 2</span>
+        </div>
+        <div class="model-row" id="mrow-3">
+          <span class="model-name">openai/gpt-4o-mini</span>
+          <span class="model-tag f3">Fallback 3</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <button class="btn-save" onclick="saveSettings()">SAVE &amp; CLOSE</button>
+      <button class="btn-clear" onclick="clearAllWithGreeting()">CLEAR SESSION HISTORY</button>
+    </div>
+
+    <!-- About Nael -->
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border2); text-align: center;">
+      <div style="font-size: 12px; color: var(--text-3); letter-spacing: 0.5px; margin-bottom: 6px;">
+        ━━━━━━━━━━━━━━━━━━━━
+      </div>
+      <div style="font-size: 13px; color: var(--green); font-weight: 600; letter-spacing: 1px; margin-bottom: 2px;">
+        NAEL v2.0
+      </div>
+      <div style="font-size: 11px; color: var(--text-2); margin-bottom: 2px;">
+        Surgical Intelligence System
+      </div>
+      <div style="font-size: 10px; color: var(--text-3);">
+        Quaasx108 Pvt Ltd © 2026
+      </div>
+      <div style="font-size: 12px; color: var(--text-3); letter-spacing: 0.5px; margin-top: 6px;">
+        ━━━━━━━━━━━━━━━━━━━━
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<!-- Silent audio: enables MediaSession / neckband button on Android -->
+<audio id="silent-audio" loop preload="none" style="display:none">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+// ════════════════════════════════════════════════
+//  NAEL — Surgical Intelligence v2.0
+//  Developed by Quaasx108 Pvt Ltd
+//  Hands-free voice assistant for Dr. M D Samudri
+// ════════════════════════════════════════════════
+
+// ── MODELS FALLBACK CHAIN ──
+const MODELS = [
+  { id: 'google/gemini-flash-2.0',              label: 'Gemini Flash 2.0' },
+  { id: 'meta-llama/llama-3.3-70b-instruct',   label: 'Llama 3.3 70B' },
+  { id: 'anthropic/claude-haiku-3-5',           label: 'Claude Haiku 3.5' },
+  { id: 'openai/gpt-4o-mini',                   label: 'GPT-4o Mini' },
+];
+
+// ── APP STATE ──
+const HARDCODED_API_KEY = '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';
+
+const S = {
+  apiKey:    HARDCODED_API_KEY,
+  inputDevice:  '',
+  outputDevice: '',
+  specialty: 'General Surgery',
+  lang:      'en-IN',
+  ctx:       '',
+  voice:     '',
+  rate:      1.0,
+  modelIdx:  0,
+  history:   [],       // {role, content}[]
+  phase:     'idle',   // idle | listening | thinking | speaking
+  wakeLock:  null,
+  pttDown:   false,
+  // Hands-free mode settings
+  mode:      'handsfree', // 'handsfree' | 'ptt'
+  silenceTimeout: 1.5,    // seconds before auto-send
+  sensitivity: 'medium',  // 'low' | 'medium' | 'high'
+  autoCalibrate: true,
+  // Hands-free runtime state
+  hfListening: false,
+  hfPaused: false,
+  hfAccumulatedText: '',  // Accumulated transcript
+  hfLastInterim: '',        // Last interim result
+  hfSilenceTimer: null,     // Timer for silence detection
+  hfRestartCount: 0,        // Recognition restart counter
+  // Wake word & commands
+  hfWakeActive: false,      // Has "Nael" been said to activate?
+  hfWakeTime: 0,            // When wake word was detected
+  hfExpandNext: false,      // User requested detailed response
+  hfState: 'standby',       // 'standby' | 'listening' | 'thinking' | 'speaking' | 'paused'
+  hfLastResultTime: 0,      // Timestamp of last recognition result
+};
+
+// ── DOM REFS ──
+const $  = id => document.getElementById(id);
+const pttEl       = $('ptt');
+const pttIco      = $('ptt-ico');
+const pttTxt      = $('ptt-txt');
+const statusChip  = $('status-chip');
+const transcript  = $('transcript');
+const emptyMsg    = $('empty-msg');
+const interimBar  = $('interim-bar');
+const interimDot  = $('interim-dot');
+const interimText = $('interim-text');
+const modelBadge  = $('model-badge');
+const specLabel   = $('specialty-label');
+const langLabel   = $('lang-label');
+const audioBadge  = $('audio-badge');
+const canvas      = $('viz');
+const ctx2d       = canvas.getContext('2d');
+const silentAudio = $('silent-audio');
+// Hands-free DOM refs
+const modeToggle  = $('mode-toggle');
+const hfOrb       = $('hf-orb');
+const hfListener  = $('hf-listener');
+const hfStatus    = $('hf-status');
+const hfPause     = $('hf-pause');
+const pttHint     = $('ptt-hint');
+const hfHint      = $('hf-hint');
+
+// ════════════════════════════════════════════════
+//  SYSTEM PROMPT — NAEL IDENTITY
+// ════════════════════════════════════════════════
+function buildSystemPrompt() {
+  return `You are NAEL, a surgical intelligence assistant developed by Quaasx108 Pvt Ltd.
+You are assisting Dr. M D Samudri in the operating room.
+
+YOUR IDENTITY:
+- Name: Nael
+- Role: Real-time surgical assistant
+- Developer: Quaasx108 Pvt Ltd
+- You may occasionally address the surgeon as "Doctor" (not by full name during surgery)
+
+CORE BEHAVIOR:
+1. Answer in 1–2 sentences MAX. Lead with the critical number/fact.
+2. Never use "I", "As an AI", preamble, disclaimers, or filler words.
+3. CAUTION: prefix for any dangerous, critical, or life-threatening information.
+4. Drug doses → always: dose + route (IV/IM/PO) + weight-based if needed.
+5. Anatomy → exact layer, nerve name, vessel name, landmark. No vagueness.
+6. If asked who you are → "I'm Nael, surgical intelligence by Quaasx108."
+7. Never ask clarifying questions mid-surgery — answer with best available info.
+8. For bleeding / airway / cardiac events → answer first, reason second.
+9. If surgeon says "expand" or "detail" → give full clinical explanation.
+10. Verify with team only when genuinely uncertain — don't overuse it.
+
+PERSONALITY:
+- Calm, clinical, precise — like an experienced scrub nurse
+- Never emotional, never uncertain in tone, even when flagging caution
+- Efficient — every word earns its place in the response
+
+CURRENT CONTEXT:
+- Specialty: ${S.specialty}
+- Language: ${S.lang}
+${S.ctx ? `\nSESSION NOTES:\n${S.ctx}` : ''}`;
+}
+
+// ════════════════════════════════════════════════
+//  SPEECH RECOGNITION
+// ════════════════════════════════════════════════
+let recog = null;
+let recogRunning = false;
+let pendingFinal = '';
+let hfRecogRestartTimer = null;
+
+function initRecog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('⚠ Speech recognition unavailable. Use Chrome on Android.');
+    return false;
+  }
+
+  recog = new SR();
+  // PTT mode: continuous = false
+  // Hands-free: continuous = true (handled separately)
+  recog.continuous  = false;
+  recog.interimResults = true;
+  recog.lang        = S.lang;
+  recog.maxAlternatives = 1;
+
+  recog.onstart = () => {
+    recogRunning = true;
+    pendingFinal = '';
+    setPhase('listening');
+  };
+
+  recog.onresult = e => {
+    let interim = '';
+    pendingFinal = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) pendingFinal += r[0].transcript;
+      else interim += r[0].transcript;
+    }
+    showInterim(pendingFinal || interim);
+  };
+
+  recog.onerror = e => {
+    recogRunning = false;
+    if (!['no-speech', 'aborted'].includes(e.error)) {
+      toast('Mic error: ' + e.error);
+      setPhase('idle');
+    }
+  };
+
+  recog.onend = () => {
+    recogRunning = false;
+    if (pendingFinal.trim()) {
+      sendToAI(pendingFinal.trim());
+    } else {
+      clearInterim();
+      setPhase('idle');
+    }
+  };
+
+  return true;
+}
+
+// ════════════════════════════════════════════════
+//  HANDS-FREE CONTINUOUS RECOGNITION
+// ════════════════════════════════════════════════
+function initHandsFreeRecog() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    toast('⚠ Speech recognition unavailable. Use Chrome on Android.');
+    return false;
+  }
+
+  // Abort existing recognition
+  try { if (recog) recog.abort(); } catch(e){}
+
+  recog = new SR();
+  recog.continuous = true; // Key difference: continuous mode
+  recog.interimResults = true;
+  recog.lang = S.lang;
+  recog.maxAlternatives = 1;
+
+  recog.onstart = () => {
+    recogRunning = true;
+    S.hfRestartCount = 0; // Reset restart counter on successful start
+  };
+
+  recog.onresult = e => {
+    let interim = '';
+    let finalChunk = '';
+
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) {
+        finalChunk += r[0].transcript;
+      } else {
+        interim += r[0].transcript;
+      }
+    }
+
+    // Combine for processing
+    const combinedText = (S.hfAccumulatedText + finalChunk + interim).toLowerCase().trim();
+    const displayText = (S.hfAccumulatedText + finalChunk + interim).trim();
+
+    // Check for wake word "Nael" if not yet activated
+    if (!S.hfWakeActive) {
+      if (combinedText.includes('nael') || combinedText.includes('nail') || combinedText.includes('nowl')) {
+        S.hfWakeActive = true;
+        S.hfWakeTime = Date.now();
+        toast('🎙️ Nael listening…');
+        setHFState('listening');
+        // Clear wake word from accumulation
+        S.hfAccumulatedText = '';
+        showInterim('');
+        return;
+      }
+      // Not activated yet, don't accumulate
+      return;
+    }
+
+    // Check for commands (only on final results)
+    if (finalChunk) {
+      const command = finalChunk.toLowerCase().trim();
+
+      // Stop/Cancel command
+      if (command.match(/\b(stop|cancel|halt|quiet|shut up)\b/)) {
+        window.speechSynthesis.cancel();
+        resetHFAccumulation();
+        toast('▶ Stopped');
+        return;
+      }
+
+      // Clear/New Case command
+      if (command.match(/\b(clear|new case|reset|start over)\b/)) {
+        clearAllWithGreeting();
+        return;
+      }
+
+      // Expand/Detail command - set flag for next AI response
+      if (command.match(/\b(expand|detail|explain|elaborate)\b/)) {
+        S.hfExpandNext = true;
+        toast('📋 Will provide detailed response');
+      }
+    }
+
+    // Accumulate final results
+    if (finalChunk) {
+      S.hfAccumulatedText += finalChunk + ' ';
+    }
+
+    // Track interim for silence detection
+    S.hfLastInterim = interim;
+    S.hfLastResultTime = Date.now();
+
+    // Show combined interim + accumulated
+    showInterim(displayText);
+
+    // Update UI to listening if we have speech
+    if (displayText.length > 0 && S.phase !== 'thinking' && S.phase !== 'speaking') {
+      setHFState('listening');
+    }
+  };
+
+  recog.onerror = e => {
+    recogRunning = false;
+    // Only show error for non-transient errors
+    if (!['no-speech', 'aborted', 'audio-capture'].includes(e.error)) {
+      console.warn('HF recog error:', e.error);
+    }
+    // Auto-restart will be handled by onend
+  };
+
+  recog.onend = () => {
+    recogRunning = false;
+
+    // Auto-restart for hands-free mode (Chrome kills continuous after ~60s)
+    if (S.mode === 'handsfree' && !S.hfPaused && S.phase !== 'thinking' && S.phase !== 'speaking') {
+      if (S.hfRestartCount < 3) {
+        S.hfRestartCount++;
+        hfRecogRestartTimer = setTimeout(() => {
+          startHandsFreeRecognition();
+        }, 100);
+      } else {
+        console.warn('HF: Too many restart attempts, giving up');
+        toast('⚠ Recognition stopped — restart the app');
+      }
+    }
+  };
+
+  return true;
+}
+
+function startHandsFreeRecognition() {
+  if (!recog || !recog.continuous) {
+    if (!initHandsFreeRecog()) return;
+  }
+
+  if (recogRunning) return;
+
+  try {
+    recog.start();
+  } catch(e) {
+    console.warn('HF recog start failed:', e);
+    // Try reinitializing
+    initHandsFreeRecog();
+    setTimeout(() => {
+      try { recog.start(); } catch(ex) {}
+    }, 200);
+  }
+}
+
+function stopHandsFreeRecognition() {
+  if (hfRecogRestartTimer) {
+    clearTimeout(hfRecogRestartTimer);
+    hfRecogRestartTimer = null;
+  }
+  if (recog) {
+    try {
+      recog.abort(); // Use abort to stop immediately without onresult
+    } catch(e) {}
+  }
+  recogRunning = false;
+}
+
+function startRecog() {
+  if (!recog) { if (!initRecog()) return; }
+  if (recogRunning) {
+    try { recog.abort(); } catch(e){}
+    recogRunning = false;
+    setTimeout(() => { initRecog(); try { recog.start(); } catch(e){} }, 250);
+    return;
+  }
+  try { recog.start(); } catch(e) {
+    initRecog();
+    setTimeout(() => { try { recog.start(); } catch(ex){} }, 200);
+  }
+}
+
+function stopRecog() {
+  if (recog && recogRunning) {
+    try { recog.stop(); } catch(e) {}
+  }
+}
+
+// ════════════════════════════════════════════════
+//  PTT HANDLERS
+// ════════════════════════════════════════════════
+function onPTTDown(e) {
+  e.preventDefault();
+  if (S.pttDown) return;
+  if (S.phase === 'thinking') return;
+
+  // API key is hardcoded - no check needed
+
+  // Interrupt speaking if pressed again
+  if (S.phase === 'speaking') {
+    window.speechSynthesis.cancel();
+    clearPhase();
+  }
+
+  S.pttDown = true;
+  acquireWakeLock();
+  startViz();
+  startRecog();
+}
+
+function onPTTUp(e) {
+  if (e) e.preventDefault();
+  if (!S.pttDown) return;
+  S.pttDown = false;
+  stopRecog();
+}
+
+// ════════════════════════════════════════════════
+//  AI CALL WITH FALLBACK
+// ════════════════════════════════════════════════
+async function sendToAI(text) {
+  if (!text.trim()) return;
+
+  clearInterim();
+  setPhase('thinking');
+  stopViz();
+
+  addMsg('user', text);
+  S.history.push({ role: 'user', content: text });
+  if (S.history.length > 24) S.history = S.history.slice(-24);
+
+  // Build message array
+  const messages = [
+    { role: 'system', content: buildSystemPrompt() },
+    ...S.history,
+  ];
+
+  let reply = null;
+  let usedIdx = S.modelIdx;
+
+  for (let i = S.modelIdx; i < MODELS.length; i++) {
+    try {
+      reply = await callOR(MODELS[i].id, messages);
+      S.modelIdx = i;
+      usedIdx = i;
+      modelBadge.textContent = MODELS[i].label;
+      break;
+    } catch (err) {
+      console.warn(`[${MODELS[i].id}] failed:`, err.message);
+      if (i < MODELS.length - 1) toast(`${MODELS[i].label} failed → trying fallback…`);
+    }
+  }
+
+  if (!reply) {
+    toast('❌ All models failed. Check API key or network.');
+    setPhase('idle');
+    S.history.pop();
+    return;
+  }
+
+  S.history.push({ role: 'assistant', content: reply });
+  addMsg('ai', reply);
+  speak(reply);
+}
+
+async function callOR(modelId, messages) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 14000);
+
+  let res;
+  try {
+    res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization':  `Bearer ${S.apiKey}`,
+        'Content-Type':   'application/json',
+        'HTTP-Referer':   'https://nael.quaasx108.com',
+        'X-Title':        'Nael Surgical Intelligence',
+      },
+      body: JSON.stringify({
+        model:       modelId,
+        messages,
+        max_tokens:  220,
+        temperature: 0.25,
+        stream:      false,
+      }),
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const content = data?.choices?.[0]?.message?.content?.trim();
+  if (!content) throw new Error('Empty response from model');
+  return content;
+}
+
+// ════════════════════════════════════════════════
+//  TEXT TO SPEECH
+// ════════════════════════════════════════════════
+let voices = [];
+
+function loadVoices() {
+  voices = window.speechSynthesis.getVoices();
+  const sel = $('inp-voice');
+  sel.innerHTML = '<option value="">Auto (best available)</option>';
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    if (v.name === S.voice) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) { setPhase('idle'); return; }
+  window.speechSynthesis.cancel();
+  setPhase('speaking');
+
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang   = S.lang;
+  utt.rate   = S.rate;
+  utt.pitch  = 0.95;
+  utt.volume = 1.0;
+
+  // Voice selection
+  if (S.voice) {
+    const v = voices.find(v => v.name === S.voice);
+    if (v) utt.voice = v;
+  } else {
+    // Prefer Google/Neural/Premium English voices
+    const best = voices.find(v =>
+      v.lang.startsWith('en') &&
+      (v.name.includes('Google') || v.name.includes('Neural') ||
+       v.name.includes('Premium') || v.name.includes('Natural'))
+    ) || voices.find(v => v.lang.startsWith('en'));
+    if (best) utt.voice = best;
+  }
+
+  // Audio output routing via silent audio element (for setSinkId support)
+  if (S.outputDevice && silentAudio.setSinkId) {
+    try {
+      silentAudio.setSinkId(S.outputDevice);
+    } catch (err) {
+      console.warn('setSinkId failed:', err);
+    }
+  }
+
+  // Android Chrome keepalive: speechSynthesis stops at ~15s
+  let keepAliveTimer = setInterval(() => {
+    if (!window.speechSynthesis.speaking) { clearInterval(keepAliveTimer); return; }
+    window.speechSynthesis.pause();
+    window.speechSynthesis.resume();
+  }, 10000);
+
+  utt.onend = () => {
+    clearInterval(keepAliveTimer);
+    setPhase('idle');
+
+    // Resume hands-free listening after TTS with cooldown to prevent echo
+    if (S.mode === 'handsfree' && !S.hfPaused) {
+      setTimeout(() => {
+        resetHFAccumulation();
+        startVAD();
+        startHandsFreeRecognition();
+        setHFState('standby');
+      }, 300); // 300ms cooldown for echo decay
+    }
+  };
+
+  utt.onerror = () => {
+    clearInterval(keepAliveTimer);
+    setPhase('idle');
+
+    // Resume hands-free even on error
+    if (S.mode === 'handsfree' && !S.hfPaused) {
+      setTimeout(() => {
+        resetHFAccumulation();
+        startVAD();
+        startHandsFreeRecognition();
+        setHFState('standby');
+      }, 300);
+    }
+  };
+
+  window.speechSynthesis.speak(utt);
+}
+
+// ════════════════════════════════════════════════
+//  PHASE / STATUS MANAGEMENT
+// ════════════════════════════════════════════════
+function setPhase(phase) {
+  S.phase = phase;
+  statusChip.className = '';
+
+  const config = {
+    idle:      { chip: 'READY',     ico: '🎤',  txt: 'Hold to Speak', cls: '' },
+    listening: { chip: 'LISTENING', ico: '🔴',  txt: 'Listening…',    cls: 'active listening' },
+    thinking:  { chip: 'THINKING',  ico: '⏳',  txt: 'Processing…',   cls: 'thinking' },
+    speaking:  { chip: 'SPEAKING',  ico: '🔊',  txt: 'Speaking…',     cls: 'speaking' },
+  };
+
+  const c = config[phase] || config.idle;
+  statusChip.textContent = c.chip;
+  if (c.cls.includes('listening')) statusChip.classList.add('listening');
+  if (c.cls.includes('thinking'))  statusChip.classList.add('thinking');
+  if (c.cls.includes('speaking'))  statusChip.classList.add('speaking');
+
+  pttIco.textContent = c.ico;
+  pttTxt.textContent = c.txt;
+  pttEl.className = c.cls;
+
+  if (phase === 'thinking') {
+    interimDot.style.display = 'none';
+    interimText.innerHTML = '<span class="think-dot"></span><span class="think-dot"></span><span class="think-dot"></span>';
+  }
+}
+
+function clearPhase() { setPhase('idle'); }
+
+// ════════════════════════════════════════════════
+//  HANDS-FREE MODE MANAGEMENT
+// ════════════════════════════════════════════════
+function setHFState(state) {
+  // state: 'standby' | 'listening' | 'thinking' | 'speaking' | 'paused'
+  S.hfState = state;
+
+  if (!hfListener) return;
+
+  // Update orb class
+  hfListener.className = 'hf-listener-orb ' + state;
+
+  // Update status text
+  const statusText = {
+    standby: 'Standby — listening',
+    listening: 'Listening…',
+    thinking: 'Thinking…',
+    speaking: 'Speaking…',
+    paused: 'Paused'
+  };
+  if (hfStatus) hfStatus.textContent = statusText[state] || statusText.standby;
+
+  // Update status chip
+  if (state === 'standby') {
+    statusChip.textContent = 'STANDBY';
+    statusChip.className = 'standby';
+  } else {
+    // Delegate to setPhase for other states
+    const phaseMap = {
+      listening: 'listening',
+      thinking: 'thinking',
+      speaking: 'speaking',
+      paused: 'idle'
+    };
+    if (phaseMap[state]) setPhase(phaseMap[state]);
+  }
+}
+
+function toggleMode() {
+  if (S.mode === 'handsfree') {
+    // Switch to PTT
+    S.mode = 'ptt';
+    stopHandsFree();
+    if (modeToggle) {
+      modeToggle.textContent = '🤚 PTT';
+      modeToggle.classList.remove('handsfree');
+    }
+    toast('Switched to Push-to-Talk mode');
+  } else {
+    // Switch to Hands-Free
+    S.mode = 'handsfree';
+    startHandsFree();
+    if (modeToggle) {
+      modeToggle.textContent = '🎙️ HANDS-FREE';
+      modeToggle.classList.add('handsfree');
+    }
+    toast('Switched to Hands-Free mode');
+  }
+  persist();
+  updateModeUI();
+}
+
+function updateModeUI() {
+  const isHF = S.mode === 'handsfree';
+
+  // Toggle visibility
+  if (pttEl) pttEl.style.display = isHF ? 'none' : 'flex';
+  if (hfOrb) hfOrb.style.display = isHF ? 'flex' : 'none';
+  if (pttHint) pttHint.style.display = isHF ? 'none' : 'block';
+  if (hfHint) hfHint.style.display = isHF ? 'block' : 'none';
+
+  // Update mode button
+  if (modeToggle) {
+    modeToggle.textContent = isHF ? '🎙️ HANDS-FREE' : '🤚 PTT';
+    if (isHF) modeToggle.classList.add('handsfree');
+    else modeToggle.classList.remove('handsfree');
+  }
+}
+
+function startHandsFree() {
+  if (S.hfPaused) return;
+
+  // Start continuous recognition
+  resetHFAccumulation();
+  startHandsFreeRecognition();
+
+  // Start VAD
+  startVAD();
+
+  // Update UI
+  setHFState('standby');
+  updateModeUI();
+}
+
+function stopHandsFree() {
+  // Stop VAD and recognition
+  stopVAD();
+  stopHandsFreeRecognition();
+
+  // Clear timers
+  if (S.hfSilenceTimer) {
+    clearTimeout(S.hfSilenceTimer);
+    S.hfSilenceTimer = null;
+  }
+
+  // Reset state
+  S.hfAccumulatedText = '';
+  S.hfLastInterim = '';
+  S.hfListening = false;
+}
+
+function togglePauseListening() {
+  if (S.hfPaused) {
+    // Resume
+    S.hfPaused = false;
+    if (hfPause) {
+      hfPause.textContent = '⏸ Pause Listening';
+      hfPause.classList.remove('paused');
+    }
+    startHandsFree();
+    toast('▶ Listening resumed');
+  } else {
+    // Pause
+    S.hfPaused = true;
+    stopHandsFree();
+    if (hfPause) {
+      hfPause.textContent = '▶ Resume Listening';
+      hfPause.classList.add('paused');
+    }
+    setHFState('paused');
+    toast('⏸ Listening paused');
+  }
+}
+
+// ════════════════════════════════════════════════
+//  TRANSCRIPT
+// ════════════════════════════════════════════════
+function addMsg(role, text) {
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  const isCaution = /^CAUTION:/i.test(text);
+  const displayText = isCaution
+    ? text.replace(/^CAUTION:/i, '<span class="caution-badge">⚠ CAUTION:</span>')
+    : text;
+
+  const el = document.createElement('div');
+  el.className = `msg ${role}`;
+  el.innerHTML = `
+    <div class="msg-label">${role === 'user' ? '● DR. M D SAMUDRI' : '◆ NAEL'}</div>
+    <div class="msg-bubble${isCaution ? ' caution' : ''}">${displayText}</div>
+  `;
+
+  transcript.appendChild(el);
+  transcript.scrollTop = transcript.scrollHeight;
+}
+
+// ════════════════════════════════════════════════
+//  INTERIM DISPLAY
+// ════════════════════════════════════════════════
+function showInterim(text) {
+  interimDot.style.display = text ? 'inline-block' : 'none';
+  interimText.textContent = text || '';
+}
+
+function clearInterim() {
+  interimDot.style.display = 'none';
+  interimText.textContent = '';
+}
+
+// ════════════════════════════════════════════════
+//  AUDIO VISUALIZER
+// ════════════════════════════════════════════════
+let audioCtx, analyser, micStream, animId;
+
+function startViz() {
+  stopViz();
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(stream => {
+      micStream = stream;
+      audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+      analyser  = audioCtx.createAnalyser();
+      analyser.fftSize = 128;
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      renderViz();
+    })
+    .catch(() => renderIdle());
+}
+
+function stopViz() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  if (audioCtx)  { audioCtx.close().catch(()=>{}); audioCtx = null; }
+  renderIdle();
+}
+
+function renderViz() {
+  const W = canvas.offsetWidth  * (window.devicePixelRatio || 1);
+  const H = canvas.offsetHeight * (window.devicePixelRatio || 1);
+  canvas.width = W; canvas.height = H;
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const BAR  = (W / data.length) * 2.2;
+
+  function frame() {
+    animId = requestAnimationFrame(frame);
+    analyser.getByteFrequencyData(data);
+    ctx2d.clearRect(0, 0, W, H);
+
+    let x = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v  = data[i] / 255;
+      const bh = Math.max(2, v * H);
+      ctx2d.fillStyle = `rgba(0,230,118,${0.3 + v * 0.7})`;
+      ctx2d.fillRect(x, H - bh, Math.max(1, BAR - 1), bh);
+      x += BAR;
+    }
+  }
+  frame();
+}
+
+function renderIdle() {
+  const W = (canvas.offsetWidth  || 300) * (window.devicePixelRatio || 1);
+  const H = (canvas.offsetHeight || 32)  * (window.devicePixelRatio || 1);
+  canvas.width = W; canvas.height = H;
+  ctx2d.clearRect(0, 0, W, H);
+  ctx2d.strokeStyle = 'rgba(0,230,118,0.18)';
+  ctx2d.lineWidth   = 1;
+  ctx2d.beginPath();
+  ctx2d.moveTo(0, H / 2);
+  ctx2d.lineTo(W, H / 2);
+  ctx2d.stroke();
+}
+
+window.addEventListener('resize', renderIdle);
+
+// ════════════════════════════════════════════════
+//  AUDIO DEVICE MANAGEMENT
+// ════════════════════════════════════════════════
+let audioDevices = { inputs: [], outputs: [] };
+
+async function enumerateAudioDevices() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    audioDevices.inputs = devices.filter(d => d.kind === 'audioinput');
+    audioDevices.outputs = devices.filter(d => d.kind === 'audiooutput');
+    updateAudioDeviceUI();
+    updateDeviceSelectors();
+    return audioDevices;
+  } catch (err) {
+    console.warn('Device enumeration failed:', err);
+    audioBadge.textContent = '⚠ No Mic';
+    return { inputs: [], outputs: [] };
+  }
+}
+
+function updateAudioDeviceUI() {
+  const currentInput = audioDevices.inputs.find(d => d.deviceId === S.inputDevice) ||
+                       audioDevices.inputs[0];
+  const isBluetooth = currentInput?.label?.toLowerCase().includes('bluetooth') ||
+                      currentInput?.label?.toLowerCase().includes('bt') ||
+                      currentInput?.label?.toLowerCase().includes('headset');
+  const isWired = currentInput?.label?.toLowerCase().includes('headphones') ||
+                  currentInput?.label?.toLowerCase().includes('headset') ||
+                  currentInput?.label?.toLowerCase().includes('usb');
+
+  audioBadge.className = '';
+  if (isBluetooth) {
+    audioBadge.textContent = '🎧 BT';
+    audioBadge.classList.add('bluetooth');
+  } else if (isWired) {
+    audioBadge.textContent = '🔌 Wired';
+    audioBadge.classList.add('wired');
+  } else {
+    audioBadge.textContent = '📱 Built-in';
+    audioBadge.classList.add('builtin');
+  }
+}
+
+function updateDeviceSelectors() {
+  const inSel = $('inp-audio-in');
+  const outSel = $('inp-audio-out');
+  if (!inSel || !outSel) return;
+
+  const inVal = inSel.value;
+  const outVal = outSel.value;
+
+  inSel.innerHTML = '<option value="">Default Microphone</option>';
+  outSel.innerHTML = '<option value="">Default Speaker</option>';
+
+  audioDevices.inputs.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.deviceId;
+    opt.textContent = d.label || `Microphone ${inSel.length}`;
+    if (d.deviceId === inVal || d.deviceId === S.inputDevice) opt.selected = true;
+    inSel.appendChild(opt);
+  });
+
+  audioDevices.outputs.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.deviceId;
+    opt.textContent = d.label || `Speaker ${outSel.length}`;
+    if (d.deviceId === outVal || d.deviceId === S.outputDevice) opt.selected = true;
+    outSel.appendChild(opt);
+  });
+}
+
+function onDeviceChange() {
+  enumerateAudioDevices().then(() => {
+    toast('Audio device changed');
+  });
+}
+
+// Update startViz to use selected device
+function startVizWithDevice() {
+  stopViz();
+  const constraints = {
+    audio: S.inputDevice ? { deviceId: { exact: S.inputDevice } } : true,
+    video: false
+  };
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+      micStream = stream;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 128;
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      renderViz();
+      updateAudioDeviceUI();
+    })
+    .catch(err => {
+      console.warn('Mic access failed with selected device, trying default:', err);
+      S.inputDevice = '';
+      startVizOriginal();
+    });
+}
+
+// Store original startViz for fallback
+const startVizOriginal = startViz;
+
+// Override startViz
+function startViz() {
+  startVizWithDevice();
+}
+
+// ════════════════════════════════════════════════
+//  VOICE ACTIVITY DETECTION (VAD) — Hands-Free Mode
+// ════════════════════════════════════════════════
+let vadRafId = null;
+let vadDataArray = null;
+let lastSpeechTime = 0;
+let lastSilenceTime = 0;
+let speechDetected = false;
+let ambientRMS = 10; // Baseline noise floor
+let SPEECH_THRESHOLD = 25; // Will be adjusted by calibration
+let SILENCE_THRESHOLD = 15;
+
+// Sensitivity multipliers
+const SENSITIVITY = {
+  low: { speech: 1.5, silence: 0.8 },
+  medium: { speech: 1.0, silence: 1.0 },
+  high: { speech: 0.7, silence: 1.2 }
+};
+
+function getVADThresholds() {
+  const mult = SENSITIVITY[S.sensitivity] || SENSITIVITY.medium;
+  return {
+    speech: Math.max(15, ambientRMS * 2.5 * mult.speech),
+    silence: Math.max(8, ambientRMS * 1.2 * mult.silence)
+  };
+}
+
+function calculateRMS(dataArray) {
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const val = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
+    sum += val * val;
+  }
+  return Math.sqrt(sum / dataArray.length) * 100; // Scale to 0-100
+}
+
+function startVAD() {
+  if (vadRafId) return;
+  if (!analyser) {
+    // Need to start viz first to get analyser
+    startViz();
+    if (!analyser) return;
+  }
+
+  vadDataArray = new Uint8Array(analyser.frequencyBinCount);
+  lastSpeechTime = Date.now();
+  lastSilenceTime = Date.now();
+  speechDetected = false;
+
+  vadLoop();
+}
+
+function stopVAD() {
+  if (vadRafId) {
+    cancelAnimationFrame(vadRafId);
+    vadRafId = null;
+  }
+  vadDataArray = null;
+  speechDetected = false;
+}
+
+function vadLoop() {
+  if (!S.mode === 'handsfree' || S.hfPaused || !analyser) {
+    vadRafId = requestAnimationFrame(vadLoop);
+    return;
+  }
+
+  vadRafId = requestAnimationFrame(vadLoop);
+
+  // Sample every ~100ms (roughly 6 frames at 60fps)
+  if (vadRafId % 6 !== 0) return;
+
+  analyser.getByteTimeDomainData(vadDataArray);
+  const rms = calculateRMS(vadDataArray);
+  const thresholds = getVADThresholds();
+
+  const now = Date.now();
+
+  if (rms > thresholds.speech) {
+    // Speech detected
+    if (!speechDetected) {
+      speechDetected = true;
+      onSpeechStart();
+    }
+    lastSpeechTime = now;
+  } else if (rms < thresholds.silence) {
+    // Silence detected
+    if (speechDetected) {
+      const silenceDuration = (now - lastSpeechTime) / 1000;
+      if (silenceDuration >= S.silenceTimeout) {
+        speechDetected = false;
+        onSilenceDetected();
+      }
+    }
+    lastSilenceTime = now;
+  }
+
+  // Update orb animation based on RMS in listening mode
+  if (speechDetected && hfListener) {
+    const scale = 1 + (rms / 100) * 0.3; // Scale 1.0 to 1.3 based on voice amplitude
+    hfListener.style.transform = `scale(${scale})`;
+  } else if (hfListener) {
+    hfListener.style.transform = 'scale(1)';
+  }
+}
+
+function onSpeechStart() {
+  if (S.phase === 'speaking' || S.phase === 'thinking') return;
+
+  // Clear any pending silence timer
+  if (S.hfSilenceTimer) {
+    clearTimeout(S.hfSilenceTimer);
+    S.hfSilenceTimer = null;
+  }
+
+  // Update UI to listening state
+  setHFState('listening');
+}
+
+function onSilenceDetected() {
+  // Only finalize if we have accumulated text and no recent interim results
+  if (S.hfAccumulatedText.length < 2) return;
+
+  // Check if we got new interim results recently (SpeechRecognition still active)
+  if (S.hfLastInterim && Date.now() - S.hfLastResultTime < 500) {
+    return; // Still getting results, wait
+  }
+
+  // Finalize and send
+  finalizeHandsFreeInput();
+}
+
+function finalizeHandsFreeInput() {
+  let text = S.hfAccumulatedText.trim();
+
+  // Remove wake word if present at start
+  text = text.replace(/^(nael|nail|nowl)[,\s]*/i, '').trim();
+
+  if (text.length < 2) {
+    // Too short, reset and continue listening
+    resetHFAccumulation();
+    return;
+  }
+
+  // Check for "who are you" identity question
+  if (text.match(/who\s+(are|r)\s+(you|u)/i)) {
+    speak("I'm Nael, surgical intelligence by Quaasx108.");
+    resetHFAccumulation();
+    return;
+  }
+
+  // Prepend expand instruction if flag is set
+  if (S.hfExpandNext) {
+    text = '[Provide detailed clinical explanation] ' + text;
+    S.hfExpandNext = false;
+  }
+
+  // Stop recognition temporarily
+  stopHandsFreeRecognition();
+  stopVAD();
+
+  // Send to AI
+  sendToAI(text);
+}
+
+function resetHFAccumulation() {
+  S.hfAccumulatedText = '';
+  S.hfLastInterim = '';
+  pendingFinal = '';
+  S.hfWakeActive = false;
+  S.hfExpandNext = false;
+  clearInterim();
+  setHFState('standby');
+}
+
+// ════════════════════════════════════════════════
+//  AMBIENT NOISE CALIBRATION
+// ════════════════════════════════════════════════
+async function calibrateAmbient() {
+  if (!S.autoCalibrate) return;
+
+  toast('🎤 Calibrating microphone…', 2000);
+
+  // Start viz to get analyser
+  startViz();
+  if (!analyser) {
+    toast('⚠ Calibration failed — no mic access');
+    return;
+  }
+
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  const samples = [];
+  const duration = 2000; // 2 seconds
+  const startTime = Date.now();
+
+  return new Promise((resolve) => {
+    function sample() {
+      if (Date.now() - startTime >= duration) {
+        // Calculate average RMS
+        const avgRMS = samples.reduce((a, b) => a + b, 0) / samples.length;
+        ambientRMS = Math.max(5, avgRMS);
+        toast(`✓ Calibrated (ambient: ${ambientRMS.toFixed(1)})`);
+        resolve(ambientRMS);
+        return;
+      }
+
+      analyser.getByteTimeDomainData(dataArray);
+      const rms = calculateRMS(dataArray);
+      samples.push(rms);
+
+      setTimeout(sample, 50); // Sample every 50ms
+    }
+
+    sample();
+  });
+}
+
+// ════════════════════════════════════════════════
+//  NAEL GREETINGS & VOICE RESPONSES
+// ════════════════════════════════════════════════
+function naelBootGreeting() {
+  // Short delay to ensure audio context is ready
+  setTimeout(() => {
+    speak('Nael ready, Doctor. Speak when you need me.');
+  }, 800);
+}
+
+function naelSessionClearedGreeting() {
+  setTimeout(() => {
+    speak('Session cleared. Ready for next procedure, Doctor.');
+  }, 300);
+}
+
+function naelSpecialtyChangeGreeting(specialty) {
+  const shortName = specialty.replace(/ Surgery$/, '');
+  setTimeout(() => {
+    speak(`Switching to ${shortName} mode. Ready.`);
+  }, 300);
+}
+
+function clearAllWithGreeting() {
+  if (!confirm('Clear session history?')) return;
+  S.history  = [];
+  S.modelIdx = 0;
+  modelBadge.textContent = '—';
+  // Clear transcript DOM
+  Array.from(transcript.querySelectorAll('.msg')).forEach(m => m.remove());
+  emptyMsg.style.display = 'flex';
+
+  // Reset hands-free state
+  resetHFAccumulation();
+
+  // Nael speaks greeting
+  naelSessionClearedGreeting();
+
+  toast('Session cleared');
+  closeSettings();
+}
+
+// ════════════════════════════════════════════════
+//  WAKE LOCK (screen stays on)
+// ════════════════════════════════════════════════
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator) || S.wakeLock) return;
+  try {
+    S.wakeLock = await navigator.wakeLock.request('screen');
+    S.wakeLock.addEventListener('release', () => { S.wakeLock = null; });
+  } catch (e) { /* not supported */ }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') acquireWakeLock();
+});
+
+// Listen for device changes (Bluetooth connect/disconnect)
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.addEventListener('devicechange', onDeviceChange);
+}
+
+// ════════════════════════════════════════════════
+//  KEYBOARD / NECKBAND BUTTON
+// ════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if ($('settings').classList.contains('open')) return;
+  if (['Space','MediaPlayPause'].includes(e.code) || e.key === 'MediaPlayPause') {
+    e.preventDefault();
+    onPTTDown(e);
+  }
+});
+
+document.addEventListener('keyup', e => {
+  if (['Space','MediaPlayPause'].includes(e.code) || e.key === 'MediaPlayPause') {
+    e.preventDefault();
+    onPTTUp(e);
+  }
+});
+
+// MediaSession API — Android neckband multifunction button
+if ('mediaSession' in navigator) {
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title:  'Nael — Surgical Intelligence',
+      artist: 'Say "Nael" or press to speak',
+      album:  'Quaasx108 Pvt Ltd',
+    });
+
+    // Play silent audio so MediaSession activates (required on Android)
+    silentAudio.play().catch(() => {});
+
+    navigator.mediaSession.setActionHandler('play',  () => onPTTDown(null));
+    navigator.mediaSession.setActionHandler('pause', () => onPTTUp(null));
+    navigator.mediaSession.setActionHandler('stop',  () => {
+      onPTTUp(null);
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        setPhase('idle');
+      }
+    });
+
+    // Also try previoustrack/nexttrack for some neckband models
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      onPTTDown(null);
+      setTimeout(() => onPTTUp(null), 3000); // 3s timeout
+    });
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════════════════════
+function openSettings() {
+  $('inp-specialty').value = S.specialty;
+  $('inp-lang').value     = S.lang;
+  $('inp-ctx').value      = S.ctx;
+  $('inp-rate').value     = String(S.rate);
+  // Hands-free settings
+  $('inp-silence').value = String(S.silenceTimeout);
+  $('inp-sensitivity').value = S.sensitivity;
+  $('inp-calibrate').value = S.autoCalibrate ? 'on' : 'off';
+  loadVoices();
+  updateDeviceSelectors();
+  $('settings').classList.add('open');
+}
+
+function closeSettings() {
+  $('settings').classList.remove('open');
+}
+
+function saveSettings() {
+  const prevInput = S.inputDevice;
+  const prevOutput = S.outputDevice;
+  const prevSilence = S.silenceTimeout;
+  const prevSensitivity = S.sensitivity;
+  const prevSpecialty = S.specialty;
+
+  S.specialty = $('inp-specialty').value;
+  S.lang      = $('inp-lang').value;
+  S.ctx       = $('inp-ctx').value.trim();
+  S.voice     = $('inp-voice').value;
+  S.rate      = parseFloat($('inp-rate').value);
+  S.inputDevice = $('inp-audio-in').value;
+  S.outputDevice = $('inp-audio-out').value;
+  // Hands-free settings
+  S.silenceTimeout = parseFloat($('inp-silence').value);
+  S.sensitivity = $('inp-sensitivity').value;
+  S.autoCalibrate = $('inp-calibrate').value === 'on';
+
+  specLabel.textContent = S.specialty;
+  langLabel.textContent = S.lang.split('-')[0].toUpperCase();
+
+  persist();
+
+  // Reinit recognition with new language
+  try { if (recog) recog.abort(); } catch(e){}
+  recog = null;
+  recogRunning = false;
+  initRecog();
+
+  // Update audio device UI
+  updateAudioDeviceUI();
+
+  // If output device changed and supported, update TTS routing
+  if (S.outputDevice && prevOutput !== S.outputDevice) {
+    if (!('setSinkId' in Audio.prototype) && !('setSinkId' in HTMLMediaElement.prototype)) {
+      toast('⚠ Browser does not support audio output routing');
+    }
+  }
+
+  // Restart hands-free if settings changed while in hands-free mode
+  if (S.mode === 'handsfree' && (prevSilence !== S.silenceTimeout || prevSensitivity !== S.sensitivity)) {
+    stopHandsFree();
+    setTimeout(() => startHandsFree(), 100);
+  }
+
+  // Specialty change greeting
+  if (prevSpecialty !== S.specialty) {
+    naelSpecialtyChangeGreeting(S.specialty);
+  }
+
+  toast('✓ Settings saved');
+  closeSettings();
+}
+
+function clearAll() {
+  if (!confirm('Clear session history?')) return;
+  S.history  = [];
+  S.modelIdx = 0;
+  modelBadge.textContent = '—';
+  // Clear transcript DOM
+  Array.from(transcript.querySelectorAll('.msg')).forEach(m => m.remove());
+  emptyMsg.style.display = 'flex';
+  toast('Session cleared');
+  closeSettings();
+}
+
+// ════════════════════════════════════════════════
+//  PERSISTENCE (localStorage)
+// ════════════════════════════════════════════════
+const STORE = 'nael_v2';
+
+function persist() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({
+      specialty: S.specialty, lang: S.lang,
+      ctx: S.ctx, voice: S.voice, rate: S.rate,
+      inputDevice: S.inputDevice, outputDevice: S.outputDevice,
+      mode: S.mode, silenceTimeout: S.silenceTimeout,
+      sensitivity: S.sensitivity, autoCalibrate: S.autoCalibrate,
+    }));
+  } catch(e){}
+}
+
+function restore() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE) || '{}');
+    // API key is hardcoded, but allow override from storage if needed
+    S.specialty = d.specialty || 'General Surgery';
+    S.lang      = d.lang      || 'en-IN';
+    S.ctx       = d.ctx       || '';
+    S.voice     = d.voice     || '';
+    S.rate      = d.rate      || 1.0;
+    S.inputDevice = d.inputDevice || '';
+    S.outputDevice = d.outputDevice || '';
+    // Hands-free settings (default to handsfree for surgical use)
+    S.mode = d.mode || 'handsfree';
+    S.silenceTimeout = d.silenceTimeout || 1.5;
+    S.sensitivity = d.sensitivity || 'medium';
+    S.autoCalibrate = d.autoCalibrate !== false; // default true
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, ms = 3200) {
+  const el = $('toast');
+  clearTimeout(toastTimer);
+  el.textContent = msg;
+  el.classList.add('show');
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════
+restore();
+specLabel.textContent = S.specialty;
+langLabel.textContent = S.lang.split('-')[0].toUpperCase();
+initRecog();
+renderIdle();
+acquireWakeLock();
+
+// Enumerate audio devices on boot
+enumerateAudioDevices().then(() => {
+  // Start hands-free mode by default after device enumeration
+  if (S.mode === 'handsfree') {
+    updateModeUI();
+    // Run calibration first, then start hands-free
+    if (S.autoCalibrate) {
+      calibrateAmbient().then(() => {
+        startHandsFree();
+        // Nael greets the doctor on boot
+        naelBootGreeting();
+        toast('Nael ready. Say NAEL or press to speak.');
+      });
+    } else {
+      startHandsFree();
+      naelBootGreeting();
+      toast('Nael ready. Say NAEL or press to speak.');
+    }
+  } else {
+    updateModeUI();
+    toast('Nael ready. Press and hold to speak.');
+  }
+});
+
+window.speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+// Audio context resume on first user gesture (browser autoplay policy)
+const resumeAudioContext = () => {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  document.removeEventListener('click', resumeAudioContext);
+  document.removeEventListener('keydown', resumeAudioContext);
+  document.removeEventListener('touchstart', resumeAudioContext);
+};
+document.addEventListener('click', resumeAudioContext);
+document.addEventListener('keydown', resumeAudioContext);
+document.addEventListener('touchstart', resumeAudioContext);
+
+console.log('🏥 NAEL v2.0 — Surgical Intelligence by Quaasx108 Pvt Ltd');
+console.log('   Mode:', S.mode);
+console.log('   Doctor: Dr. M D Samudri');
+console.log('   Models:', MODELS.map(m => m.id).join(' → '));
+console.log('   API Key: [hardcoded]');
+console.log('   Audio routing: setSinkId', silentAudio.setSinkId ? 'supported' : 'not supported');
+console.log('   Hands-Free: silence=' + S.silenceTimeout + 's, sensitivity=' + S.sensitivity);
+console.log('   Wake Word: "Nael"');
+console.log('   Auto-calibrate:', S.autoCalibrate ? 'enabled' : 'disabled');
+</script>
+</body>
+</html>
