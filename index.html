@@ -1258,7 +1258,7 @@ const MODELS = [
 ];
 
 // ── APP STATE ──
-const HARDCODED_API_KEY = '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';
+const HARDCODED_API_KEY = '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';
 
 const S = {
   apiKey:    HARDCODED_API_KEY,
@@ -1694,7 +1694,6 @@ async function callOR(modelId, messages) {
       headers: {
         'Authorization':  `Bearer ${S.apiKey}`,
         'Content-Type':   'application/json',
-        'HTTP-Referer':   'https://nael.quaasx108.com',
         'X-Title':        'Nael Surgical Intelligence',
       },
       body: JSON.stringify({
@@ -1712,6 +1711,8 @@ async function callOR(modelId, messages) {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
+    console.error('OpenRouter Error:', res.status, errData);
+    console.error('API Key used (first 20 chars):', S.apiKey.substring(0, 20) + '...');
     throw new Error(errData?.error?.message || `HTTP ${res.status}`);
   }
 
