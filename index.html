@@ -1359,6 +1359,125 @@ const S = {
   hfLastResultTime: 0,      // Timestamp of last recognition result
 };
 
+// Mobile browsers block TTS until a user gesture; mic permission alone is not enough.
+let speechUnlocked = false;
+const speechQueue = [];
+let pendingBootGreeting = null;
+let tapToSpeakToastShown = false;
+
+function isTouchMobile() {
+  return /Android|iPhone|iPad|iPod|webOS|Mobile/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints > 0 && /Safari/i.test(navigator.userAgent));
+}
+
+/** Call once after tap / PTT — required for speechSynthesis on Android Chrome */
+function unlockAudioAndSpeech() {
+  if (speechUnlocked) {
+    flushSpeechQueue();
+    return;
+  }
+  speechUnlocked = true;
+  try {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume();
+    }
+  } catch (e) {}
+  if (silentAudio) silentAudio.play().catch(() => {});
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  if (pendingBootGreeting) {
+    const fn = pendingBootGreeting;
+    pendingBootGreeting = null;
+    fn();
+  }
+  flushSpeechQueue();
+}
+
+function flushSpeechQueue() {
+  if (!speechQueue.length) return;
+  // Only the last reply — each speakNow() cancels any previous utterance
+  const text = speechQueue[speechQueue.length - 1];
+  speechQueue.length = 0;
+  speakNow(text);
+}
+
+/** Speak without re-queueing (internal) */
+function speakNow(text) {
+  if (!window.speechSynthesis) { setPhase('idle'); return; }
+  window.speechSynthesis.cancel();
+  setPhase('speaking');
+
+  voices = window.speechSynthesis.getVoices();
+  if (!voices.length) loadVoices();
+
+  const utt = new SpeechSynthesisUtterance(text);
+  const baseLang = (S.lang || 'en-IN').split('-')[0];
+  utt.lang = baseLang === 'en' ? S.lang : (S.lang || 'en-IN');
+  utt.rate = S.rate;
+  utt.pitch = 0.95;
+  utt.volume = 1.0;
+
+  if (S.voice) {
+    const v = voices.find(v => v.name === S.voice);
+    if (v) utt.voice = v;
+  } else if (voices.length) {
+    const best = voices.find(v =>
+      v.lang && v.lang.startsWith('en') &&
+      (/Google|Neural|Premium|Natural|English/i.test(v.name))
+    ) || voices.find(v => v.lang && v.lang.startsWith('en')) || voices[0];
+    if (best) utt.voice = best;
+  }
+
+  if (S.outputDevice && silentAudio.setSinkId) {
+    try { silentAudio.setSinkId(S.outputDevice); } catch (err) {}
+  }
+
+  const isLong = text.length > 80;
+  let keepAliveTimer = null;
+  if (isLong) {
+    keepAliveTimer = setInterval(() => {
+      if (!window.speechSynthesis.speaking) { clearInterval(keepAliveTimer); return; }
+      try {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } catch (e) {}
+    }, 12000);
+  }
+
+  utt.onend = () => {
+    if (keepAliveTimer) clearInterval(keepAliveTimer);
+    setPhase('idle');
+    if (S.mode === 'handsfree' && !S.hfPaused) {
+      setTimeout(() => {
+        resetHFAccumulation();
+        startVAD();
+        startHandsFreeRecognition();
+        setHFState('standby');
+      }, 350);
+    }
+  };
+
+  utt.onerror = () => {
+    if (keepAliveTimer) clearInterval(keepAliveTimer);
+    setPhase('idle');
+    if (S.mode === 'handsfree' && !S.hfPaused) {
+      setTimeout(() => {
+        resetHFAccumulation();
+        startVAD();
+        startHandsFreeRecognition();
+        setHFState('standby');
+      }, 350);
+    }
+  };
+
+  try {
+    window.speechSynthesis.speak(utt);
+  } catch (e) {
+    setPhase('idle');
+    toast('⚠ Voice output failed — tap the screen once, then try again');
+  }
+}
+
 // ── DOM REFS ──
 const $  = id => document.getElementById(id);
 const pttEl       = $('ptt');
@@ -1464,7 +1583,13 @@ function initRecog() {
 
   recog.onerror = e => {
     recogRunning = false;
-    if (!['no-speech', 'aborted'].includes(e.error)) {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      toast('🎤 Allow microphone in browser site settings');
+      setPhase('idle');
+    } else if (e.error === 'network') {
+      toast('🌐 Speech recognition needs a network connection');
+      setPhase('idle');
+    } else if (!['no-speech', 'aborted'].includes(e.error)) {
       toast('Mic error: ' + e.error);
       setPhase('idle');
     }
@@ -1592,26 +1717,29 @@ function initHandsFreeRecog() {
 
   recog.onerror = e => {
     recogRunning = false;
-    // Only show error for non-transient errors
-    if (!['no-speech', 'aborted', 'audio-capture'].includes(e.error)) {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      toast('🎤 Allow microphone in browser site settings');
+    } else if (e.error === 'network') {
+      toast('🌐 Speech recognition needs a network connection');
+    } else if (!['no-speech', 'aborted', 'audio-capture'].includes(e.error)) {
       console.warn('HF recog error:', e.error);
     }
-    // Auto-restart will be handled by onend
   };
 
   recog.onend = () => {
     recogRunning = false;
 
-    // Auto-restart for hands-free mode (Chrome kills continuous after ~60s)
+    // Auto-restart for hands-free mode (Chrome kills continuous after ~60s; mobile benefits from more retries)
     if (S.mode === 'handsfree' && !S.hfPaused && S.phase !== 'thinking' && S.phase !== 'speaking') {
-      if (S.hfRestartCount < 3) {
+      const maxRestarts = isTouchMobile() ? 12 : 5;
+      if (S.hfRestartCount < maxRestarts) {
         S.hfRestartCount++;
         hfRecogRestartTimer = setTimeout(() => {
           startHandsFreeRecognition();
-        }, 100);
+        }, 150);
       } else {
         console.warn('HF: Too many restart attempts, giving up');
-        toast('⚠ Recognition stopped — restart the app');
+        toast('⚠ Recognition stopped — tap Pause then Resume, or reload the page');
       }
     }
   };
@@ -1676,10 +1804,9 @@ function stopRecog() {
 // ════════════════════════════════════════════════
 function onPTTDown(e) {
   e.preventDefault();
+  unlockAudioAndSpeech();
   if (S.pttDown) return;
   if (S.phase === 'thinking') return;
-
-  // API key is hardcoded - no check needed
 
   // Interrupt speaking if pressed again
   if (S.phase === 'speaking') {
@@ -1811,76 +1938,17 @@ function loadVoices() {
 
 function speak(text) {
   if (!window.speechSynthesis) { setPhase('idle'); return; }
-  window.speechSynthesis.cancel();
-  setPhase('speaking');
+  if (!text || !String(text).trim()) { setPhase('idle'); return; }
 
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.lang   = S.lang;
-  utt.rate   = S.rate;
-  utt.pitch  = 0.95;
-  utt.volume = 1.0;
-
-  // Voice selection
-  if (S.voice) {
-    const v = voices.find(v => v.name === S.voice);
-    if (v) utt.voice = v;
-  } else {
-    // Prefer Google/Neural/Premium English voices
-    const best = voices.find(v =>
-      v.lang.startsWith('en') &&
-      (v.name.includes('Google') || v.name.includes('Neural') ||
-       v.name.includes('Premium') || v.name.includes('Natural'))
-    ) || voices.find(v => v.lang.startsWith('en'));
-    if (best) utt.voice = best;
+  if (!speechUnlocked) {
+    speechQueue.push(text);
+    if (isTouchMobile() && !tapToSpeakToastShown) {
+      tapToSpeakToastShown = true;
+      toast('👆 Tap the screen once to enable voice replies', 4500);
+    }
+    return;
   }
-
-  // Audio output routing via silent audio element (for setSinkId support)
-  if (S.outputDevice && silentAudio.setSinkId) {
-    try {
-      silentAudio.setSinkId(S.outputDevice);
-    } catch (err) {
-      console.warn('setSinkId failed:', err);
-    }
-  }
-
-  // Android Chrome keepalive: speechSynthesis stops at ~15s
-  let keepAliveTimer = setInterval(() => {
-    if (!window.speechSynthesis.speaking) { clearInterval(keepAliveTimer); return; }
-    window.speechSynthesis.pause();
-    window.speechSynthesis.resume();
-  }, 10000);
-
-  utt.onend = () => {
-    clearInterval(keepAliveTimer);
-    setPhase('idle');
-
-    // Resume hands-free listening after TTS with cooldown to prevent echo
-    if (S.mode === 'handsfree' && !S.hfPaused) {
-      setTimeout(() => {
-        resetHFAccumulation();
-        startVAD();
-        startHandsFreeRecognition();
-        setHFState('standby');
-      }, 300); // 300ms cooldown for echo decay
-    }
-  };
-
-  utt.onerror = () => {
-    clearInterval(keepAliveTimer);
-    setPhase('idle');
-
-    // Resume hands-free even on error
-    if (S.mode === 'handsfree' && !S.hfPaused) {
-      setTimeout(() => {
-        resetHFAccumulation();
-        startVAD();
-        startHandsFreeRecognition();
-        setHFState('standby');
-      }, 300);
-    }
-  };
-
-  window.speechSynthesis.speak(utt);
+  speakNow(text);
 }
 
 // ════════════════════════════════════════════════
@@ -1954,6 +2022,7 @@ function setHFState(state) {
 }
 
 function toggleMode() {
+  unlockAudioAndSpeech();
   if (S.mode === 'handsfree') {
     // Switch to PTT
     S.mode = 'ptt';
@@ -2027,6 +2096,7 @@ function stopHandsFree() {
 }
 
 function togglePauseListening() {
+  unlockAudioAndSpeech();
   if (S.hfPaused) {
     // Resume
     S.hfPaused = false;
@@ -2323,7 +2393,7 @@ function stopVAD() {
 }
 
 function vadLoop() {
-  if (!S.mode === 'handsfree' || S.hfPaused || !analyser) {
+  if (S.mode !== 'handsfree' || S.hfPaused || !analyser) {
     vadRafId = requestAnimationFrame(vadLoop);
     return;
   }
@@ -2483,10 +2553,11 @@ async function calibrateAmbient() {
 //  NAEL GREETINGS & VOICE RESPONSES
 // ════════════════════════════════════════════════
 function naelBootGreeting() {
-  // Short delay to ensure audio context is ready
-  setTimeout(() => {
-    speak('Nael ready, Doctor. Speak when you need me.');
-  }, 800);
+  const run = () => {
+    setTimeout(() => speak('Nael ready, Doctor. Speak when you need me.'), 800);
+  };
+  if (speechUnlocked) run();
+  else pendingBootGreeting = run;
 }
 
 function naelSessionClearedGreeting() {
@@ -2695,6 +2766,7 @@ function saveAndClose() {
 }
 
 function saveSettings() {
+  unlockAudioAndSpeech();
   const prevInput = S.inputDevice;
   const prevOutput = S.outputDevice;
   const prevSilence = S.silenceTimeout;
@@ -2877,23 +2949,26 @@ enumerateAudioDevices().then(() => {
       openSettings();
     }, 1500);
   }
+  // Phones/tablets block TTS until user touches the page once
+  if (isTouchMobile()) {
+    setTimeout(() => {
+      if (!speechUnlocked) toast('👆 Tap the screen once to hear Nael\'s voice', 4500);
+    }, 2200);
+  }
 });
 
 window.speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
 
-// Audio context resume on first user gesture (browser autoplay policy)
-const resumeAudioContext = () => {
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  document.removeEventListener('click', resumeAudioContext);
-  document.removeEventListener('keydown', resumeAudioContext);
-  document.removeEventListener('touchstart', resumeAudioContext);
-};
-document.addEventListener('click', resumeAudioContext);
-document.addEventListener('keydown', resumeAudioContext);
-document.addEventListener('touchstart', resumeAudioContext);
+// Unlock TTS + audio on any tap (mobile Chrome requires this for speechSynthesis)
+function onUserActivationUnlock() {
+  unlockAudioAndSpeech();
+}
+document.addEventListener('click', onUserActivationUnlock, { passive: true });
+document.addEventListener('touchstart', onUserActivationUnlock, { passive: true });
+document.addEventListener('keydown', e => {
+  if (['Space', 'MediaPlayPause'].includes(e.code) || e.key === ' ') unlockAudioAndSpeech();
+}, { passive: true });
 
 console.log('🏥 NAEL v2.0 — Surgical Intelligence by Quaasx108 Pvt Ltd');
 console.log('   Mode:', S.mode);
