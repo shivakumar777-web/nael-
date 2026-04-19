@@ -784,22 +784,22 @@
       -webkit-backdrop-filter: blur(16px);
       display: none;
       flex-direction: column;
-      overflow-y: auto;
-      padding: 0 0 var(--safe-bot);
+      overflow: hidden;
     }
 
     #settings.open { display: flex; }
 
     .settings-hdr {
-      position: sticky;
-      top: 0;
+      flex-shrink: 0;
       padding: 16px 18px 14px;
+      padding-top: calc(16px + var(--safe-top));
       display: flex;
       align-items: center;
       justify-content: space-between;
       border-bottom: 1px solid var(--border);
-      background: rgba(2,12,5,0.95);
+      background: rgba(2,12,5,0.98);
       backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       z-index: 10;
     }
 
@@ -811,11 +811,34 @@
       text-transform: uppercase;
     }
 
+    .settings-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
     .settings-body {
       padding: 16px 18px;
       display: flex;
       flex-direction: column;
       gap: 24px;
+    }
+
+    /* Sticky save footer — always visible */
+    .settings-footer {
+      flex-shrink: 0;
+      padding: 12px 18px;
+      padding-bottom: calc(12px + var(--safe-bot));
+      background: rgba(2,12,5,0.98);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
     }
 
     .s-section-title {
@@ -845,14 +868,15 @@
       background: var(--bg3);
       border: 1px solid var(--border);
       border-radius: var(--r);
-      padding: 12px 14px;
+      padding: 13px 14px;
       color: var(--text);
       font-family: var(--mono);
-      font-size: 13px;
+      font-size: 16px; /* 16px prevents auto-zoom on iOS/Android */
       outline: none;
       transition: border-color 0.2s;
       appearance: none;
       -webkit-appearance: none;
+      touch-action: manipulation;
     }
 
     .s-input:focus,
@@ -922,26 +946,27 @@
     /* Buttons */
     .btn-save {
       width: 100%;
-      padding: 15px;
+      padding: 16px;
       background: var(--green);
       color: #020C05;
       border: none;
       border-radius: var(--r);
       font-family: var(--mono);
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 700;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-    .btn-save:active { background: #00FF8A; transform: scale(0.98); }
+    .btn-save:active { background: #00FF8A; transform: scale(0.97); }
 
     .btn-clear {
       width: 100%;
-      margin-top: 8px;
-      padding: 12px;
+      padding: 13px;
       background: transparent;
       color: var(--red);
       border: 1px solid rgba(255,61,0,0.3);
@@ -951,7 +976,9 @@
       letter-spacing: 0.15em;
       text-transform: uppercase;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .btn-clear:active { background: rgba(255,61,0,0.08); }
@@ -1095,8 +1122,11 @@
 <div id="settings">
   <div class="settings-hdr">
     <span class="settings-title">⚙ Nael Configuration</span>
-    <button class="icon-btn" onclick="closeSettings()">✕</button>
+    <button class="icon-btn" onclick="saveAndClose()" aria-label="Save and close" style="font-size:13px; width:auto; padding:0 10px; gap:4px;">
+      <span>💾</span><span style="font-family:var(--mono);font-size:10px;letter-spacing:0.1em;">SAVE</span>
+    </button>
   </div>
+  <div class="settings-scroll">
   <div class="settings-body">
 
     <!-- API Key (Mobile-friendly input) -->
@@ -1105,7 +1135,7 @@
       <div class="s-field">
         <label class="s-label">API Key <span id="api-key-status" style="font-size: 11px; color: var(--red);">● Required</span></label>
         <div class="api-key-wrapper">
-          <input type="password" class="s-input" id="inp-api-key" placeholder="sk-or-v1-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 16px; padding-right: 44px;" oninput="updateApiKeyStatus()">
+          <input type="password" class="s-input" id="inp-api-key" placeholder="sk-or-v1-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" style="padding-right: 44px;" oninput="updateApiKeyStatus()" onpaste="setTimeout(()=>updateApiKeyStatus(),60)">
           <button type="button" class="api-key-toggle" onclick="toggleApiKeyVisibility()" aria-label="Show/Hide API key">👁</button>
         </div>
         <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
@@ -1245,16 +1275,8 @@
       </div>
     </div>
 
-    <div>
-      <button class="btn-save" onclick="saveSettings()">SAVE &amp; CLOSE</button>
-      <button class="btn-clear" onclick="clearAllWithGreeting()">CLEAR SESSION HISTORY</button>
-    </div>
-
     <!-- About Nael -->
-    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border2); text-align: center;">
-      <div style="font-size: 12px; color: var(--text-3); letter-spacing: 0.5px; margin-bottom: 6px;">
-        ━━━━━━━━━━━━━━━━━━━━
-      </div>
+    <div style="padding-top: 20px; border-top: 1px solid var(--border2); text-align: center;">
       <div style="font-size: 13px; color: var(--green); font-weight: 600; letter-spacing: 1px; margin-bottom: 2px;">
         NAEL v2.0
       </div>
@@ -1264,10 +1286,14 @@
       <div style="font-size: 10px; color: var(--text-3);">
         Quaasx108 Pvt Ltd © 2026
       </div>
-      <div style="font-size: 12px; color: var(--text-3); letter-spacing: 0.5px; margin-top: 6px;">
-        ━━━━━━━━━━━━━━━━━━━━
-      </div>
     </div>
+  </div>
+  </div><!-- /settings-scroll -->
+
+  <!-- Sticky save footer — always visible on mobile -->
+  <div class="settings-footer">
+    <button class="btn-save" onclick="saveSettings()">💾 SAVE SETTINGS</button>
+    <button class="btn-clear" onclick="clearAllWithGreeting()">🗑 CLEAR SESSION HISTORY</button>
   </div>
 </div>
 
@@ -2575,19 +2601,22 @@ function openSettings() {
   $('inp-silence').value = String(S.silenceTimeout);
   $('inp-sensitivity').value = S.sensitivity;
   $('inp-calibrate').value = S.autoCalibrate ? 'on' : 'off';
-  // API Key - show masked preview
+  // API Key - show current value and status
   const apiKeyInput = $('inp-api-key');
   const apiKeyStatus = $('api-key-status');
   if (S.apiKey) {
     apiKeyInput.value = S.apiKey;
     apiKeyInput.type = 'password';
-    apiKeyStatus.textContent = '● Active';
+    apiKeyStatus.textContent = '● Saved ✓';
     apiKeyStatus.style.color = 'var(--green)';
   } else {
     apiKeyInput.value = '';
     apiKeyStatus.textContent = '● Required';
     apiKeyStatus.style.color = 'var(--red)';
   }
+  // Scroll settings back to top
+  const scrollEl = document.querySelector('.settings-scroll');
+  if (scrollEl) scrollEl.scrollTop = 0;
   loadVoices();
   updateDeviceSelectors();
   $('settings').classList.add('open');
@@ -2614,8 +2643,17 @@ function updateApiKeyStatus() {
   const status = $('api-key-status');
   const val = input.value.trim();
   if (val && val.startsWith('sk-or-')) {
-    status.textContent = '● Valid format';
+    status.textContent = '● Saved ✓';
     status.style.color = 'var(--green)';
+    // Auto-save to localStorage immediately when valid key is entered
+    S.apiKey = val;
+    try {
+      localStorage.setItem('nael_api_key', val);
+      localStorage.setItem('nael_api_key_backup', val);
+      localStorage.setItem(STORE, JSON.stringify(
+        Object.assign(JSON.parse(localStorage.getItem(STORE) || '{}'), { apiKey: val })
+      ));
+    } catch(e) { console.warn('Auto-save failed:', e); }
   } else if (val) {
     status.textContent = '● Invalid format';
     status.style.color = 'var(--amber)';
@@ -2626,7 +2664,34 @@ function updateApiKeyStatus() {
 }
 
 function closeSettings() {
+  // Auto-save API key and basic settings on close (no toast — silent save)
+  const newApiKey = $('inp-api-key').value.trim();
+  if (newApiKey && newApiKey.startsWith('sk-or-')) {
+    S.apiKey = newApiKey;
+    try {
+      localStorage.setItem('nael_api_key', S.apiKey);
+      localStorage.setItem('nael_api_key_backup', S.apiKey);
+    } catch(e) {}
+  }
+  // Save specialty/lang/ctx silently too
+  if ($('inp-specialty')) S.specialty = $('inp-specialty').value;
+  if ($('inp-lang')) S.lang = $('inp-lang').value;
+  if ($('inp-ctx')) S.ctx = $('inp-ctx').value.trim();
+  if ($('inp-rate')) S.rate = parseFloat($('inp-rate').value);
+  if ($('inp-voice')) S.voice = $('inp-voice').value;
+  if ($('inp-audio-in')) S.inputDevice = $('inp-audio-in').value;
+  if ($('inp-audio-out')) S.outputDevice = $('inp-audio-out').value;
+  if ($('inp-silence')) S.silenceTimeout = parseFloat($('inp-silence').value);
+  if ($('inp-sensitivity')) S.sensitivity = $('inp-sensitivity').value;
+  if ($('inp-calibrate')) S.autoCalibrate = $('inp-calibrate').value === 'on';
+  persist();
+  specLabel.textContent = S.specialty;
+  langLabel.textContent = S.lang.split('-')[0].toUpperCase();
   $('settings').classList.remove('open');
+}
+
+function saveAndClose() {
+  saveSettings();
 }
 
 function saveSettings() {
