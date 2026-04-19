@@ -2651,11 +2651,19 @@ function saveSettings() {
   const newApiKey = $('inp-api-key').value.trim();
   if (newApiKey && newApiKey.startsWith('sk-or-')) {
     S.apiKey = newApiKey;
-    localStorage.setItem('nael_api_key', S.apiKey);
-    toast('🔑 API Key saved');
+    try {
+      localStorage.setItem('nael_api_key', S.apiKey);
+      localStorage.setItem('nael_api_key_backup', S.apiKey); // Backup
+      console.log('API Key saved:', S.apiKey.substring(0, 20) + '...');
+      toast('🔑 API Key saved successfully');
+    } catch(e) {
+      console.error('Failed to save API key:', e);
+      toast('⚠ Failed to save key - storage full?');
+    }
   } else if (newApiKey === '') {
     S.apiKey = '';
     localStorage.removeItem('nael_api_key');
+    localStorage.removeItem('nael_api_key_backup');
   } else if (newApiKey) {
     toast('⚠ Invalid key format. Should start with sk-or-');
     return; // Don't close settings
@@ -2730,8 +2738,15 @@ function persist() {
 function restore() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE) || '{}');
-    // API key from localStorage first, then persisted state
-    S.apiKey = d.apiKey || localStorage.getItem('nael_api_key') || '';
+    // API key from localStorage first, then persisted state, then backup
+    const storedKey = localStorage.getItem('nael_api_key');
+    const backupKey = localStorage.getItem('nael_api_key_backup');
+    S.apiKey = d.apiKey || storedKey || backupKey || '';
+    if (S.apiKey) {
+      console.log('API Key restored:', S.apiKey.substring(0, 20) + '...');
+    } else {
+      console.log('No API key found in storage');
+    }
     S.lang      = d.lang      || 'en-IN';
     S.ctx       = d.ctx       || '';
     S.voice     = d.voice     || '';
