@@ -863,6 +863,28 @@
 
     .s-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234E7A55' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
+    /* API Key input */
+    .api-key-wrapper { position: relative; }
+    .api-key-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: var(--text-2);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      min-width: 36px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .api-key-toggle:active { background: var(--bg4); }
+
     .s-select option { background: #061208; }
 
     /* Model list */
@@ -1076,6 +1098,21 @@
     <button class="icon-btn" onclick="closeSettings()">✕</button>
   </div>
   <div class="settings-body">
+
+    <!-- API Key (Mobile-friendly input) -->
+    <div>
+      <div class="s-section-title">🔑 OpenRouter API Key</div>
+      <div class="s-field">
+        <label class="s-label">API Key <span id="api-key-status" style="font-size: 11px; color: var(--red);">● Required</span></label>
+        <div class="api-key-wrapper">
+          <input type="password" class="s-input" id="inp-api-key" placeholder="sk-or-v1-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 16px; padding-right: 44px;">
+          <button type="button" class="api-key-toggle" onclick="toggleApiKeyVisibility()" aria-label="Show/Hide API key">👁</button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
+          Get key from <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--green);">openrouter.ai/keys</a> • Saved locally only
+        </div>
+      </div>
+    </div>
 
     <!-- Audio Devices -->
     <div>
@@ -1715,13 +1752,9 @@ async function callOR(modelId, messages) {
     const errData = await res.json().catch(() => ({}));
     console.error('OpenRouter Error:', res.status, errData);
     if (res.status === 401) {
-      // Prompt for API key if 401
-      const newKey = prompt('OpenRouter API Key required. Enter your key:');
-      if (newKey) {
-        S.apiKey = newKey;
-        localStorage.setItem('nael_api_key', newKey);
-        toast('API key saved. Please try again.');
-      }
+      // Mobile-friendly: show toast and open settings instead of prompt()
+      toast('🔑 API Key invalid — add it in Settings ⚙');
+      openSettings();
     }
     throw new Error(errData?.error?.message || `HTTP ${res.status}`);
   }
@@ -2542,9 +2575,38 @@ function openSettings() {
   $('inp-silence').value = String(S.silenceTimeout);
   $('inp-sensitivity').value = S.sensitivity;
   $('inp-calibrate').value = S.autoCalibrate ? 'on' : 'off';
+  // API Key - show masked preview
+  const apiKeyInput = $('inp-api-key');
+  const apiKeyStatus = $('api-key-status');
+  if (S.apiKey) {
+    apiKeyInput.value = S.apiKey;
+    apiKeyInput.type = 'password';
+    apiKeyStatus.textContent = '● Active';
+    apiKeyStatus.style.color = 'var(--green)';
+  } else {
+    apiKeyInput.value = '';
+    apiKeyStatus.textContent = '● Required';
+    apiKeyStatus.style.color = 'var(--red)';
+  }
   loadVoices();
   updateDeviceSelectors();
   $('settings').classList.add('open');
+  // Auto-focus API key field if empty (mobile-friendly)
+  if (!S.apiKey) {
+    setTimeout(() => apiKeyInput.focus(), 100);
+  }
+}
+
+function toggleApiKeyVisibility() {
+  const input = $('inp-api-key');
+  const btn = document.querySelector('.api-key-toggle');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
 }
 
 function closeSettings() {
@@ -2569,6 +2631,15 @@ function saveSettings() {
   S.silenceTimeout = parseFloat($('inp-silence').value);
   S.sensitivity = $('inp-sensitivity').value;
   S.autoCalibrate = $('inp-calibrate').value === 'on';
+  // API Key - save to both S.apiKey and localStorage
+  const newApiKey = $('inp-api-key').value.trim();
+  if (newApiKey && newApiKey.startsWith('sk-or-v1-')) {
+    S.apiKey = newApiKey;
+    localStorage.setItem('nael_api_key', S.apiKey);
+  } else if (newApiKey === '') {
+    S.apiKey = '';
+    localStorage.removeItem('nael_api_key');
+  }
 
   specLabel.textContent = S.specialty;
   langLabel.textContent = S.lang.split('-')[0].toUpperCase();
@@ -2631,6 +2702,7 @@ function persist() {
       inputDevice: S.inputDevice, outputDevice: S.outputDevice,
       mode: S.mode, silenceTimeout: S.silenceTimeout,
       sensitivity: S.sensitivity, autoCalibrate: S.autoCalibrate,
+      apiKey: S.apiKey,
     }));
   } catch(e){}
 }
@@ -2638,8 +2710,8 @@ function persist() {
 function restore() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE) || '{}');
-    // API key is hardcoded, but allow override from storage if needed
-    S.specialty = d.specialty || 'General Surgery';
+    // API key from localStorage first, then persisted state
+    S.apiKey = d.apiKey || localStorage.getItem('nael_api_key') || '';
     S.lang      = d.lang      || 'en-IN';
     S.ctx       = d.ctx       || '';
     S.voice     = d.voice     || '';
@@ -2698,6 +2770,13 @@ enumerateAudioDevices().then(() => {
     updateModeUI();
     toast('Nael ready. Press and hold to speak.');
   }
+  // Check if API key is missing and auto-open settings
+  if (!S.apiKey) {
+    setTimeout(() => {
+      toast('🔑 Enter your OpenRouter API key to begin');
+      openSettings();
+    }, 1500);
+  }
 });
 
 window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -2720,7 +2799,7 @@ console.log('🏥 NAEL v2.0 — Surgical Intelligence by Quaasx108 Pvt Ltd');
 console.log('   Mode:', S.mode);
 console.log('   Doctor: Dr. M D Samudri');
 console.log('   Models:', MODELS.map(m => m.id).join(' → '));
-console.log('   API Key: [hardcoded]');
+console.log('   API Key:', S.apiKey ? '[user provided]' : '[none set]');
 console.log('   Audio routing: setSinkId', silentAudio.setSinkId ? 'supported' : 'not supported');
 console.log('   Hands-Free: silence=' + S.silenceTimeout + 's, sensitivity=' + S.sensitivity);
 console.log('   Wake Word: "Nael"');
