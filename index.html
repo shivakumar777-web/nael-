@@ -1258,10 +1258,12 @@ const MODELS = [
 ];
 
 // ── APP STATE ──
-const HARDCODED_API_KEY = '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';
+// API Key - Set via Vercel Environment Variable or user prompt
+// For local testing: const HARDCODED_API_KEY = 'your-key-here';
+const HARDCODED_API_KEY = '';
 
 const S = {
-  apiKey:    HARDCODED_API_KEY,
+  apiKey:    HARDCODED_API_KEY || localStorage.getItem('nael_api_key') || '',
   inputDevice:  '',
   outputDevice: '',
   specialty: 'General Surgery',
@@ -1712,7 +1714,15 @@ async function callOR(modelId, messages) {
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     console.error('OpenRouter Error:', res.status, errData);
-    console.error('API Key used (first 20 chars):', S.apiKey.substring(0, 20) + '...');
+    if (res.status === 401) {
+      // Prompt for API key if 401
+      const newKey = prompt('OpenRouter API Key required. Enter your key:');
+      if (newKey) {
+        S.apiKey = newKey;
+        localStorage.setItem('nael_api_key', newKey);
+        toast('API key saved. Please try again.');
+      }
+    }
     throw new Error(errData?.error?.message || `HTTP ${res.status}`);
   }
 
