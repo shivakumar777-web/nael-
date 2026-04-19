@@ -1105,7 +1105,7 @@
       <div class="s-field">
         <label class="s-label">API Key <span id="api-key-status" style="font-size: 11px; color: var(--red);">● Required</span></label>
         <div class="api-key-wrapper">
-          <input type="password" class="s-input" id="inp-api-key" placeholder="sk-or-v1-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 16px; padding-right: 44px;">
+          <input type="password" class="s-input" id="inp-api-key" placeholder="sk-or-v1-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="font-size: 16px; padding-right: 44px;" oninput="updateApiKeyStatus()">
           <button type="button" class="api-key-toggle" onclick="toggleApiKeyVisibility()" aria-label="Show/Hide API key">👁</button>
         </div>
         <div style="font-size: 11px; color: var(--text-3); margin-top: 4px;">
@@ -2609,6 +2609,22 @@ function toggleApiKeyVisibility() {
   }
 }
 
+function updateApiKeyStatus() {
+  const input = $('inp-api-key');
+  const status = $('api-key-status');
+  const val = input.value.trim();
+  if (val && val.startsWith('sk-or-')) {
+    status.textContent = '● Valid format';
+    status.style.color = 'var(--green)';
+  } else if (val) {
+    status.textContent = '● Invalid format';
+    status.style.color = 'var(--amber)';
+  } else {
+    status.textContent = '● Required';
+    status.style.color = 'var(--red)';
+  }
+}
+
 function closeSettings() {
   $('settings').classList.remove('open');
 }
@@ -2633,12 +2649,16 @@ function saveSettings() {
   S.autoCalibrate = $('inp-calibrate').value === 'on';
   // API Key - save to both S.apiKey and localStorage
   const newApiKey = $('inp-api-key').value.trim();
-  if (newApiKey && newApiKey.startsWith('sk-or-v1-')) {
+  if (newApiKey && newApiKey.startsWith('sk-or-')) {
     S.apiKey = newApiKey;
     localStorage.setItem('nael_api_key', S.apiKey);
+    toast('🔑 API Key saved');
   } else if (newApiKey === '') {
     S.apiKey = '';
     localStorage.removeItem('nael_api_key');
+  } else if (newApiKey) {
+    toast('⚠ Invalid key format. Should start with sk-or-');
+    return; // Don't close settings
   }
 
   specLabel.textContent = S.specialty;
