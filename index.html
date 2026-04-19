@@ -1276,7 +1276,7 @@ const S = {
   pttDown:   false,
   // Hands-free mode settings
   mode:      'handsfree', // 'handsfree' | 'ptt'
-  silenceTimeout: 1.5,    // seconds before auto-send
+  silenceTimeout: 0.8,    // seconds before auto-send (lowered for faster response)
   sensitivity: 'medium',  // 'low' | 'medium' | 'high'
   autoCalibrate: true,
   // Hands-free runtime state
@@ -1459,21 +1459,15 @@ function initHandsFreeRecog() {
     const combinedText = (S.hfAccumulatedText + finalChunk + interim).toLowerCase().trim();
     const displayText = (S.hfAccumulatedText + finalChunk + interim).trim();
 
-    // Check for wake word "Nael" if not yet activated
-    if (!S.hfWakeActive) {
-      if (combinedText.includes('nael') || combinedText.includes('nail') || combinedText.includes('nowl')) {
-        S.hfWakeActive = true;
-        S.hfWakeTime = Date.now();
-        toast('🎙️ Nael listening…');
-        setHFState('listening');
-        // Clear wake word from accumulation
-        S.hfAccumulatedText = '';
-        showInterim('');
-        return;
-      }
-      // Not activated yet, don't accumulate
-      return;
+    // Wake word detection (optional - processes all speech)
+    const hasWakeWord = combinedText.includes('nael') || combinedText.includes('nail') || combinedText.includes('nowl');
+    if (hasWakeWord && !S.hfWakeActive) {
+      S.hfWakeActive = true;
+      S.hfWakeTime = Date.now();
+      toast('🎙️ Nael listening…');
     }
+    // Always activate on any speech (no wake word required)
+    S.hfWakeActive = true;
 
     // Check for commands (only on final results)
     if (finalChunk) {
@@ -1515,6 +1509,19 @@ function initHandsFreeRecog() {
     // Update UI to listening if we have speech
     if (displayText.length > 0 && S.phase !== 'thinking' && S.phase !== 'speaking') {
       setHFState('listening');
+    }
+
+    // CRITICAL FIX: If we have final results, send to AI immediately
+    // Don't wait for VAD silence detection (which may fail)
+    if (finalChunk && finalChunk.trim().length > 1) {
+      // Small delay to allow more speech to accumulate (300ms)
+      if (S.hfSilenceTimer) clearTimeout(S.hfSilenceTimer);
+      S.hfSilenceTimer = setTimeout(() => {
+        // Double-check we have content and aren't already processing
+        if (S.hfAccumulatedText.trim().length > 1 && S.phase !== 'thinking' && S.phase !== 'speaking') {
+          finalizeHandsFreeInput();
+        }
+      }, 600);
     }
   };
 
@@ -2308,10 +2315,11 @@ function onSilenceDetected() {
   if (S.hfAccumulatedText.length < 2) return;
 
   // Check if we got new interim results recently (SpeechRecognition still active)
-  if (S.hfLastInterim && Date.now() - S.hfLastResultTime < 500) {
+  if (S.hfLastInterim && Date.now() - S.hfLastResultTime < 400) {
     return; // Still getting results, wait
   }
 
+  // CRITICAL FIX: Lower debounce time for faster response (was 500ms)
   // Finalize and send
   finalizeHandsFreeInput();
 }
@@ -2629,7 +2637,7 @@ function restore() {
     S.outputDevice = d.outputDevice || '';
     // Hands-free settings (default to handsfree for surgical use)
     S.mode = d.mode || 'handsfree';
-    S.silenceTimeout = d.silenceTimeout || 1.5;
+    S.silenceTimeout = d.silenceTimeout || 0.8;
     S.sensitivity = d.sensitivity || 'medium';
     S.autoCalibrate = d.autoCalibrate !== false; // default true
   } catch(e) {}
